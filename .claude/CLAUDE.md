@@ -1,0 +1,369 @@
+# AI Image Generation Prompt Preset Manager
+
+## 프로젝트 개요
+NAI(NovelAI) 4를 활용하여 캐릭터 이미지 세트를 효율적으로 생성하고 관리하는 개인용 웹 애플리케이션.
+포즈/제스처별 프롬프트 프리셋을 관리하고, 대량 생성 후 즐겨찾기로 최종 이미지를 선별하는 워크플로우를 지원한다.
+
+## 기술 스택
+
+### 프레임워크
+- **TanStack Start** (RC/v1) — 풀스택 React 프레임워크
+  - TanStack Router (파일 기반, 타입 세이프 라우팅)
+  - TanStack Query (서버 상태 관리, 캐싱, 비동기 데이터 페칭)
+  - Vite (빌드 도구)
+  - Server Functions (타입 세이프 RPC)
+
+### DB / ORM
+- **SQLite** (better-sqlite3) — 로컬 파일 DB (`data/studio.db`)
+- **Drizzle ORM** — 타입 세이프 ORM
+  - drizzle-kit으로 마이그레이션 관리
+  - 스키마 파일에서 TypeScript 타입 자동 추론
+
+### 프롬프트 에디터
+- **CodeMirror 6** — 프롬프트 편집기
+  - 단부루(Danbooru) 태그 자동완성 지원
+  - `{{placeholder}}` 구문 하이라이팅
+  - general_prompt, negative_prompt, char_prompt 편집에 사용
+
+### 이미지 저장
+- 로컬 파일시스템 (`data/` 디렉토리)
+  - 원본: `data/images/{projectId}/{jobId}_{seed}_{timestamp}.png`
+  - 썸네일: `data/thumbnails/{projectId}/{동일 파일명}`
+- 썸네일 자동 생성 (sharp 라이브러리, 장변 300px 기준, 원본 비율 유지)
+
+### 비동기 처리
+- 이미지 생성 큐는 서버 사이드 **in-memory 큐**로 관리
+- **동시 요청은 1개**만 (순차 처리)
+- **생성 간 간격(딜레이)**: 기본 500ms, 사용자가 UI에서 조절 가능 (0~30초)
+- 프론트엔드에서 TanStack Query의 polling으로 진행률 확인 (진행 중 2초 간격)
+
+### 스타일링
+- Tailwind CSS
+- **다크 테마 기본** (단일 테마, 이미지 감상에 최적화)
+- **반응형 디자인**: 데스크톱 + 태블릿 + 모바일 대응
+
+## 프로젝트 구조
+```
+app/
+├── routes/                    # TanStack Router 파일 기반 라우팅
+│   ├── __root.tsx
+│   ├── index.tsx              # 대시보드
+│   ├── projects/
+│   │   ├── index.tsx          # 프로젝트 목록
+│   │   ├── $projectId.tsx     # 프로젝트 상세
+│   │   └── new.tsx            # 프로젝트 생성
+│   ├── scene-packs/
+│   │   ├── index.tsx          # 씬 팩 목록
+│   │   └── $scenePackId.tsx   # 씬 팩 상세 (씬 관리)
+│   ├── gallery/
+│   │   └── index.tsx          # 갤러리 (필터링, 즐겨찾기)
+│   ├── jobs/
+│   │   └── index.tsx          # 생성 작업 큐 모니터
+│   └── settings/
+│       └── index.tsx          # 설정 (NAI API 키, 생성 딜레이 등)
+├── components/
+│   ├── prompt-editor/         # CodeMirror 기반 프롬프트 에디터 (단부루 자동완성, 플레이스홀더 하이라이팅)
+│   ├── gallery/               # 이미지 그리드, 필터, 즐겨찾기 토글, Lightbox
+│   └── common/                # 공통 UI 컴포넌트
+├── server/
+│   ├── db/
+│   │   ├── schema.ts          # Drizzle 스키마 정의
+│   │   ├── index.ts           # DB 연결 (better-sqlite3)
+│   │   └── migrations/        # drizzle-kit 마이그레이션 파일
+│   ├── services/
+│   │   ├── prompt.ts          # 프롬프트 합성 로직
+│   │   ├── nai.ts             # NAI API 클라이언트
+│   │   ├── generation.ts      # 생성 큐 관리
+│   │   └── image.ts           # 이미지 저장, 썸네일 생성
+│   └── functions/             # Server Functions (API 엔드포인트)
+│       ├── projects.ts
+│       ├── characters.ts
+│       ├── scene-packs.ts
+│       ├── scenes.ts
+│       ├── generation.ts
+│       ├── gallery.ts
+│       └── settings.ts
+├── lib/
+│   ├── placeholder.ts         # {{placeholder}} 파싱/치환 유틸
+│   └── danbooru.ts            # 단부루 태그 데이터 / 자동완성 로직
+└── styles/
+    └── app.css                # Tailwind CSS
+data/
+├── studio.db                  # SQLite DB 파일
+├── images/                    # 생성된 이미지 원본
+│   └── {projectId}/           # 프로젝트별 하위 폴더
+└── thumbnails/                # 썸네일
+    └── {projectId}/
+drizzle.config.ts              # Drizzle Kit 설정
+```
+
+## 핵심 개념
+
+### Project (프로젝트)
+- 하나의 이미지 생성 단위 (씬)
+- general_prompt, negative_prompt, 생성 파라미터(steps, cfg, sampler 등)를 가짐
+- 프롬프트에 `{{placeholder}}` 형식의 플레이스홀더를 배치하여 씬별 가변 값을 삽입
+- 하나의 프로젝트에 여러 캐릭터(슬롯)가 존재할 수 있음 (한 이미지에 모두 포함되는 캐릭터들)
+
+### Character (캐릭터)
+- 프로젝트 내 NAI 캐릭터 프롬프트 슬롯
+- 각 캐릭터는 독립적인 char_prompt를 가지며, 마찬가지로 `{{placeholder}}` 사용 가능
+- slot_index로 순서 관리
+
+### Scene Pack (씬 팩)
+- 포즈/제스처 프리셋의 묶음 (글로벌 템플릿)
+- 예: "기본 감정 세트" = { 웃음, 슬픔, 안녕, 화남 }
+
+### Scene (씬)
+- 씬 팩 내 개별 포즈/제스처 정의
+- 각 플레이스홀더에 들어갈 기본값을 JSON으로 보유
+- 예: "웃음" → { "expression": "smiling, happy", "background": "warm gradient" }
+
+### 스냅샷 시스템
+- 글로벌 씬 팩을 프로젝트에 할당하면 해당 시점의 내용이 복사됨 (project_scene_packs → project_scenes)
+- 스냅샷 이후 독립적으로 편집 가능
+- 글로벌 씬 팩 원본이 변경되어도 기존 할당에 영향 없음
+- 같은 글로벌 씬 팩을 다시 할당하면 **새로운 project_scene_pack + project_scenes**가 생성됨 (덮어쓰기가 아닌 추가)
+- source_scene_id로 원본 추적 (글로벌 씬 삭제 시 SET NULL)
+
+### Character Scene Override (캐릭터별 씬 오버라이드)
+- 같은 씬이라도 캐릭터마다 다른 플레이스홀더 값을 가질 수 있음
+- project_scenes.placeholders → general_prompt용
+- character_scene_overrides.placeholders → 해당 캐릭터의 char_prompt용
+
+## 프롬프트 합성 규칙
+1. project.general_prompt의 `{{placeholder}}`를 project_scenes.placeholders 값으로 치환
+2. 각 character.char_prompt의 `{{placeholder}}`를 character_scene_overrides.placeholders 값으로 치환
+3. 매칭되지 않는 플레이스홀더는 빈 문자열로 처리
+4. 합성된 최종 프롬프트는 generation_jobs.resolved_prompts에 JSON으로 저장 (재현용)
+5. **중첩 플레이스홀더 불가** (`{{outer_{{inner}}}}` 형태 미지원)
+6. 프롬프트 템플릿에서 **플레이스홀더 목록을 자동 추출**하여 씬 편집 UI에 입력 필드로 표시
+
+## 이미지 생성 (비동기)
+- NAI API를 직접 호출하여 이미지를 생성
+- 배치 생성 지원: "프로젝트A × 웃음 × 20장" 형태
+- **여러 씬을 한번에 선택하여 배치 생성 가능** (예: 프로젝트A × [웃음, 슬픔, 화남] × 각 10장)
+- 프로젝트 내 여러 캐릭터는 **한 이미지에 포함되는 캐릭터들**임 (캐릭터별 독립 생성이 아님)
+- 생성 요청은 큐에 등록되고 백그라운드에서 순차 처리 (~7초/장)
+- **동시 API 요청은 1개**, 생성 간 기본 딜레이 500ms (사용자 조절: 0~30초)
+- 생성 중에도 사용자는 갤러리 탐색, 프리셋 편집 등 다른 작업 가능
+- TanStack Query polling으로 진행률 실시간 확인 (2초 간격)
+- **NAI API 호출 실패 시 해당 job 상태를 failed로 설정** (자동 재시도 없음, UI에서 수동 재생성)
+- **작업 취소**: 현재 진행 중인 API 요청은 완료 대기, 큐 내 나머지 대기 작업만 취소
+- 완료 시 알림
+
+## 갤러리 및 즐겨찾기
+- 생성된 이미지는 자동으로 프로젝트 + 씬 태그가 붙어 저장
+- 필터링 축: 프로젝트별, 씬(포즈)별, 즐겨찾기, 태그별, 글로벌 씬 기준 크로스 프로젝트
+- 즐겨찾기 토글, 별점(1~5), 메모 기능
+- **태그**: 사용자가 직접 수동으로 이미지에 태그 부여
+- 각 이미지에 생성 시 사용된 전체 프롬프트, 파라미터, 시드값 등 메타데이터 보존
+- 이미지는 로컬 파일시스템에 저장, 썸네일 자동 생성
+- **갤러리 레이아웃**: 무한 스크롤 그리드
+- **이미지 상세**: Lightbox 모달 (갤러리 컨텍스트 유지)
+
+## 프론트엔드 UI 세부사항
+
+### 대시보드 (index)
+- 최근 프로젝트 목록
+- 현재 진행 중인 Job 상태
+- 최근 생성된 이미지 미리보기
+
+### 설정 페이지 (settings)
+- NAI API 키 입력/저장
+- 이미지 생성 간 딜레이 설정 (기본 500ms, 범위 0~30초)
+
+### 프롬프트 에디터 (CodeMirror 6)
+- 단부루(Danbooru) 태그 자동완성
+- `{{placeholder}}` 구문 하이라이팅 (시각적으로 구분)
+- general_prompt, negative_prompt, char_prompt 모두에 적용
+
+### 반응형 디자인
+- **데스크톱**: 풀 레이아웃, 사이드바 네비게이션
+- **태블릿**: 축소된 사이드바, 적응형 그리드
+- **모바일**: 하단 네비게이션 바, 단일 컬럼 레이아웃, 터치 최적화
+
+## NAI API 세부사항
+
+### 엔드포인트
+- 이미지 생성: `https://image.novelai.net/ai/generate-image`
+- 이미지 생성 (스트림): `https://image.novelai.net/ai/generate-image-stream`
+
+### 인증
+- `Authorization: Bearer ${token}` 헤더
+- **API 키는 UI 설정 화면에서 사용자가 입력**, 서버 DB에 저장
+
+### 응답
+- **ZIP 형식**으로 이미지 데이터 반환
+- ZIP 압축 해제 후 이미지 파일 추출하여 `data/images/{projectId}/`에 저장
+
+### 요청 파라미터 (NAI_metadata_CLAUDE.md 참조)
+- `prompt`, `negative_prompt`: 프롬프트 텍스트
+- `model`, `width`, `height`, `steps`, `cfg_scale`, `cfg_rescale`, `sampler`, `scheduler`, `seed`
+- `smea`, `smea_dyn`, `variety`: boolean 옵션
+- `qualityToggle`: Quality Tags 자동 추가 여부
+- `ucPreset`: Undesired Content 프리셋 (0=Heavy, 1=Light, 2=Furry, 3=Human, 4=None)
+- `imageFormat`: 'png' | 'webp'
+- `characterPrompts[]`: { prompt, negative, enabled, position: {x, y} } — V4 캐릭터 프롬프트
+- `characterPositionEnabled`: 위치 기능 활성화 여부
+
+## DB 스키마 (Drizzle ORM)
+
+### projects
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | integer (PK, autoincrement) | |
+| name | text (NOT NULL) | |
+| description | text | |
+| general_prompt | text | 플레이스홀더 포함 |
+| negative_prompt | text | |
+| parameters | text (DEFAULT '{}') | JSON. steps, cfg, sampler, width, height 등 |
+| created_at | text (DEFAULT datetime('now')) | |
+| updated_at | text (DEFAULT datetime('now')) | |
+
+### characters
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | integer (PK, autoincrement) | |
+| project_id | integer (FK → projects, CASCADE) | |
+| slot_index | integer (DEFAULT 0) | UNIQUE(project_id, slot_index) |
+| name | text (NOT NULL) | |
+| char_prompt | text (NOT NULL) | 플레이스홀더 포함 |
+| created_at | text | |
+| updated_at | text | |
+
+### scene_packs
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | integer (PK, autoincrement) | |
+| name | text (NOT NULL) | |
+| description | text | |
+| created_at | text | |
+| updated_at | text | |
+
+### scenes
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | integer (PK, autoincrement) | |
+| scene_pack_id | integer (FK → scene_packs, CASCADE) | |
+| name | text (NOT NULL) | UNIQUE(scene_pack_id, name) |
+| description | text | |
+| placeholders | text (DEFAULT '{}') | JSON. 플레이스홀더 기본값 |
+| sort_order | integer (DEFAULT 0) | |
+| created_at | text | |
+| updated_at | text | |
+
+### project_scene_packs
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | integer (PK, autoincrement) | |
+| project_id | integer (FK → projects, CASCADE) | |
+| scene_pack_id | integer (FK → scene_packs, SET NULL) | 원본 추적용 |
+| name | text (NOT NULL) | UNIQUE(project_id, name) |
+| created_at | text | |
+
+### project_scenes
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | integer (PK, autoincrement) | |
+| project_scene_pack_id | integer (FK → project_scene_packs, CASCADE) | |
+| source_scene_id | integer (FK → scenes, SET NULL) | 원본 추적용 |
+| name | text (NOT NULL) | UNIQUE(project_scene_pack_id, name) |
+| placeholders | text (DEFAULT '{}') | JSON. general_prompt용. 스냅샷, 편집 가능 |
+| sort_order | integer (DEFAULT 0) | |
+| created_at | text | |
+| updated_at | text | |
+
+### character_scene_overrides
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | integer (PK, autoincrement) | |
+| project_scene_id | integer (FK → project_scenes, CASCADE) | |
+| character_id | integer (FK → characters, CASCADE) | |
+| placeholders | text (DEFAULT '{}') | JSON. char_prompt용 플레이스홀더 |
+| UNIQUE(project_scene_id, character_id) | | |
+
+### generation_jobs
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | integer (PK, autoincrement) | |
+| project_id | integer (FK → projects, CASCADE) | |
+| project_scene_id | integer (FK → project_scenes, CASCADE) | |
+| source_scene_id | integer (FK → scenes, SET NULL) | |
+| resolved_prompts | text (NOT NULL) | JSON. 최종 합성 프롬프트 전체 |
+| resolved_parameters | text (NOT NULL) | JSON |
+| total_count | integer (DEFAULT 1) | |
+| completed_count | integer (DEFAULT 0) | |
+| status | text (DEFAULT 'pending') | pending, running, completed, failed, cancelled |
+| created_at | text | |
+| updated_at | text | |
+
+### generated_images
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | integer (PK, autoincrement) | |
+| job_id | integer (FK → generation_jobs, CASCADE) | |
+| project_id | integer (FK → projects, CASCADE) | |
+| project_scene_id | integer (FK → project_scenes, CASCADE) | |
+| source_scene_id | integer (FK → scenes, SET NULL) | 글로벌 씬 기준 크로스 프로젝트 조회용 |
+| file_path | text (NOT NULL) | 로컬 저장 경로 |
+| thumbnail_path | text | |
+| seed | integer | |
+| metadata | text (DEFAULT '{}') | JSON |
+| is_favorite | integer (DEFAULT 0) | 0 or 1 |
+| rating | integer | 1~5 |
+| memo | text | |
+| created_at | text | |
+
+### tags
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | integer (PK, autoincrement) | |
+| name | text (NOT NULL, UNIQUE) | |
+
+### image_tags
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| image_id | integer (FK → generated_images, CASCADE) | 복합 PK |
+| tag_id | integer (FK → tags, CASCADE) | 복합 PK |
+
+- 태그는 **사용자가 직접 수동으로** 이미지에 부여
+
+### settings (앱 설정 저장용)
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| key | text (PK) | 설정 키 (예: 'nai_api_key', 'generation_delay') |
+| value | text (NOT NULL) | 설정 값 |
+| updated_at | text | |
+
+## 인덱스
+- characters: (project_id)
+- scenes: (scene_pack_id)
+- project_scene_packs: (project_id)
+- project_scenes: (project_scene_pack_id)
+- character_scene_overrides: (project_scene_id), (character_id)
+- generation_jobs: (status), (project_id), (project_scene_id)
+- generated_images: (project_id), (project_scene_id), (source_scene_id), (is_favorite), (job_id)
+- image_tags: (tag_id)
+
+## 프로젝트 삭제 정책
+- 프로젝트 삭제 시 **생성된 이미지 파일은 보존** (DB 레코드만 CASCADE 삭제, 파일 유지)
+
+## 주요 사용 플로우
+1. 설정 페이지에서 NAI API 키 입력
+2. 씬 팩 생성 → 씬(포즈/제스처) 추가
+3. 프로젝트 생성 → 캐릭터 슬롯 추가 → 프롬프트 템플릿 작성 (CodeMirror, 단부루 자동완성)
+4. 프로젝트에 씬 팩 할당 (스냅샷) → 캐릭터별 오버라이드 편집
+5. 씬 선택 (다중 가능) → 배치 생성 (비동기)
+6. 갤러리에서 결과 확인 → 즐겨찾기/별점/태그 선별
+7. 캐릭터별/씬별/태그별 즐겨찾기 모아보기 → 최종 이미지 세트 완성
+
+## 개발 명령어
+```bash
+pnpm install                    # 의존성 설치
+pnpm dev                        # 개발 서버 실행
+pnpm build                      # 프로덕션 빌드
+pnpm drizzle-kit generate       # 마이그레이션 생성
+pnpm drizzle-kit migrate        # 마이그레이션 적용
+pnpm drizzle-kit studio         # Drizzle Studio (DB 브라우저)
+```

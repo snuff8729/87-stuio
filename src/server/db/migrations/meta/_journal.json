@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1771171727215,
+      "tag": "0000_common_jetstream",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1771173016525,
+      "tag": "0001_certain_bishop",
+      "breakpoints": true
+    }
+  ]
+}
