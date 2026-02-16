@@ -195,6 +195,78 @@ export const listScenesForFilter = createServerFn({ method: 'GET' })
     return scenes
   })
 
+export const getImageDetailPage = createServerFn({ method: 'GET' })
+  .inputValidator(
+    (data: { imageId: number; projectId?: number; projectSceneId?: number }) => data,
+  )
+  .handler(async ({ data }) => {
+    const image = db
+      .select()
+      .from(generatedImages)
+      .where(eq(generatedImages.id, data.imageId))
+      .get()
+    if (!image) throw new Error('Image not found')
+
+    const imgTags = db
+      .select({ tagId: imageTags.tagId, tagName: tags.name })
+      .from(imageTags)
+      .innerJoin(tags, eq(imageTags.tagId, tags.id))
+      .where(eq(imageTags.imageId, data.imageId))
+      .all()
+
+    let projectName: string | null = null
+    if (image.projectId) {
+      const proj = db
+        .select({ name: projects.name })
+        .from(projects)
+        .where(eq(projects.id, image.projectId))
+        .get()
+      projectName = proj?.name ?? null
+    }
+
+    let projectSceneName: string | null = null
+    if (image.projectSceneId) {
+      const scene = db
+        .select({ name: projectScenes.name })
+        .from(projectScenes)
+        .where(eq(projectScenes.id, image.projectSceneId))
+        .get()
+      projectSceneName = scene?.name ?? null
+    }
+
+    // Prev/next within same filter context (newest-first order)
+    const filterConditions = []
+    if (data.projectId) filterConditions.push(eq(generatedImages.projectId, data.projectId))
+    if (data.projectSceneId) filterConditions.push(eq(generatedImages.projectSceneId, data.projectSceneId))
+
+    // Prev = newer image (higher id)
+    const prevResult = db
+      .select({ id: generatedImages.id })
+      .from(generatedImages)
+      .where(and(sql`${generatedImages.id} > ${data.imageId}`, ...filterConditions))
+      .orderBy(asc(generatedImages.id))
+      .limit(1)
+      .get()
+
+    // Next = older image (lower id)
+    const nextResult = db
+      .select({ id: generatedImages.id })
+      .from(generatedImages)
+      .where(and(sql`${generatedImages.id} < ${data.imageId}`, ...filterConditions))
+      .orderBy(desc(generatedImages.id))
+      .limit(1)
+      .get()
+
+    return {
+      ...image,
+      tags: imgTags,
+      projectName,
+      projectSceneName,
+      prevId: prevResult?.id ?? null,
+      nextId: nextResult?.id ?? null,
+    }
+  })
+
 export const bulkUpdateImages = createServerFn({ method: 'POST' })
   .inputValidator(
     (data: { imageIds: number[]; isFavorite?: number; rating?: number | null; delete?: boolean }) =>

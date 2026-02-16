@@ -4,7 +4,6 @@ import { toast } from 'sonner'
 import { getWorkspaceData, listProjectJobs, getRecentImages, getSceneImageCounts } from '@/server/functions/workspace'
 import { updateProject } from '@/server/functions/projects'
 import { createGenerationJob, cancelJobs } from '@/server/functions/generation'
-import { updateProjectScene } from '@/server/functions/project-scenes'
 import { getSetting } from '@/server/functions/settings'
 import { WorkspaceLayout } from '@/components/workspace/workspace-layout'
 import { WorkspaceHeader } from '@/components/workspace/workspace-header'
@@ -17,7 +16,7 @@ import { CharacterPopover } from '@/components/workspace/character-popover'
 import { ScenePackDialog } from '@/components/workspace/scene-pack-dialog'
 import { GenerationProgress } from '@/components/workspace/generation-progress'
 
-export const Route = createFileRoute('/workspace/$projectId')({
+export const Route = createFileRoute('/workspace/$projectId/')({
   loader: async ({ params }) => {
     const projectId = Number(params.projectId)
     return getWorkspaceData({ data: projectId })
@@ -93,9 +92,6 @@ function WorkspacePage() {
     debouncedSave({ parameters: JSON.stringify(newParams) })
   }
 
-  // ── Scene state ──
-  const [selectedSceneId, setSelectedSceneId] = useState<number | null>(null)
-
   // ── Live images (updated incrementally during generation) ──
   const [liveImages, setLiveImages] = useState(data.recentImages)
   useEffect(() => {
@@ -107,7 +103,6 @@ function WorkspacePage() {
     Record<number, { imageId: number | null; thumbnailPath: string | null }>
   >({})
 
-  // Clear overrides when loader data refreshes (server caught up)
   useEffect(() => {
     setThumbnailOverrides({})
   }, [data.scenePacks])
@@ -115,7 +110,6 @@ function WorkspacePage() {
   // ── Live scene image counts (polled during generation) ──
   const [liveSceneCounts, setLiveSceneCounts] = useState<Record<number, number>>({})
 
-  // Clear live counts when loader data refreshes (server caught up)
   useEffect(() => {
     setLiveSceneCounts({})
   }, [data.scenePacks])
@@ -126,7 +120,6 @@ function WorkspacePage() {
     for (const img of liveImages) {
       const sid = img.projectSceneId
       if (sid == null || sid in thumbs) continue
-      // liveImages is ordered by createdAt desc, first hit is latest
       thumbs[sid] = img.thumbnailPath
     }
     return thumbs
@@ -160,7 +153,6 @@ function WorkspacePage() {
     data.queueStatus.processing ? [] as Awaited<ReturnType<typeof listProjectJobs>>: [],
   )
 
-  // All scenes across all packs (flat list for generation)
   const allScenes = scenePacks.flatMap((pack) =>
     pack.scenes.map((s) => ({ ...s, packName: pack.name })),
   )
@@ -179,25 +171,8 @@ function WorkspacePage() {
     })
   }
 
-  function handleThumbnailChange(
-    sceneId: number,
-    imageId: number | null,
-    thumbnailPath?: string | null,
-  ) {
-    // Optimistic update — UI changes instantly
-    setThumbnailOverrides((prev) => ({
-      ...prev,
-      [sceneId]: { imageId, thumbnailPath: thumbnailPath ?? null },
-    }))
-    // Fire-and-forget server update + background invalidate
-    updateProjectScene({ data: { id: sceneId, thumbnailImageId: imageId } })
-      .then(() => router.invalidate())
-      .catch(() => toast.error('Failed to update thumbnail'))
-  }
-
-  // Poll: always fetch jobs + images together, fixed interval, skip if busy
+  // Poll during generation
   const prevCompletedRef = useRef(0)
-  const [generationRefreshKey, setGenerationRefreshKey] = useState(0)
   useEffect(() => {
     if (!generating) return
     let cancelled = false
@@ -221,13 +196,11 @@ function WorkspacePage() {
         const totalCompleted = jobs.reduce((sum, j) => sum + (j.completedCount ?? 0), 0)
         if (totalCompleted !== prevCompletedRef.current) {
           prevCompletedRef.current = totalCompleted
-          setGenerationRefreshKey((k) => k + 1)
         }
 
         if (jobs.length === 0) {
           setGenerating(false)
           prevCompletedRef.current = 0
-          setGenerationRefreshKey((k) => k + 1)
           router.invalidate()
         }
       } catch {
@@ -241,8 +214,7 @@ function WorkspacePage() {
   }, [generating, projectId, router])
 
   async function handleGenerate() {
-    // Determine which scenes to generate (only those with count > 0)
-    const candidateIds = selectedSceneId ? [selectedSceneId] : allScenes.map((s) => s.id)
+    const candidateIds = allScenes.map((s) => s.id)
     const sceneIds = candidateIds.filter((id) => getSceneCount(id) > 0)
     if (candidateIds.length === 0) {
       toast.error('No scenes available. Add a scene pack first.')
@@ -253,7 +225,6 @@ function WorkspacePage() {
       return
     }
 
-    // Check API key
     const apiKey = await getSetting({ data: 'nai_api_key' })
     if (!apiKey) {
       toast.error('API key not set. Go to Settings to configure.', {
@@ -265,7 +236,6 @@ function WorkspacePage() {
       return
     }
 
-    // Flush any pending saves first
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current)
       await saveProject({
@@ -288,7 +258,6 @@ function WorkspacePage() {
         },
       })
       toast.success(`${batchTotal} image generation started`)
-      // Start polling
       const jobs = await listProjectJobs({ data: projectId })
       setActiveJobs(jobs)
     } catch {
@@ -311,9 +280,7 @@ function WorkspacePage() {
   const [leftOpen, setLeftOpen] = useState(false)
   const [rightOpen, setRightOpen] = useState(false)
 
-  // Compute total images for the generate button
-  const targetSceneIds = selectedSceneId ? [selectedSceneId] : allScenes.map((s) => s.id)
-  const totalImages = targetSceneIds.reduce((sum, id) => sum + getSceneCount(id), 0)
+  const totalImages = allScenes.reduce((sum, s) => sum + getSceneCount(s.id), 0)
 
   return (
     <WorkspaceLayout
@@ -337,16 +304,10 @@ function WorkspacePage() {
       centerPanel={
         <ScenePanel
           scenePacks={scenePacks}
-          selectedSceneId={selectedSceneId}
-          onSelectScene={setSelectedSceneId}
-          characters={data.characters}
-          generalPrompt={generalPrompt}
           projectId={projectId}
           sceneCounts={sceneCounts}
           defaultCount={countPerScene}
           onSceneCountChange={handleSceneCountChange}
-          onThumbnailChange={handleThumbnailChange}
-          refreshKey={generationRefreshKey}
         />
       }
       rightPanel={

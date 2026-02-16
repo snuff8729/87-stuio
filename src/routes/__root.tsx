@@ -79,9 +79,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const routerState = useRouterState()
-  const isWorkspace = routerState.location.pathname.startsWith('/workspace')
+  const { pathname } = routerState.location
+  const isWorkspace = pathname.startsWith('/workspace')
+  const isImageDetail = /^\/gallery\/\d+/.test(pathname)
 
-  if (isWorkspace) {
+  if (isWorkspace || isImageDetail) {
     return (
       <TooltipProvider delayDuration={300}>
         <Outlet />

@@ -12,7 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as GalleryIndexRouteImport } from './routes/gallery/index'
-import { Route as WorkspaceProjectIdRouteImport } from './routes/workspace/$projectId'
+import { Route as GalleryImageIdRouteImport } from './routes/gallery/$imageId'
+import { Route as WorkspaceProjectIdRouteRouteImport } from './routes/workspace/$projectId/route'
+import { Route as WorkspaceProjectIdIndexRouteImport } from './routes/workspace/$projectId/index'
+import { Route as WorkspaceProjectIdScenesSceneIdRouteImport } from './routes/workspace/$projectId/scenes/$sceneId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -29,42 +32,88 @@ const GalleryIndexRoute = GalleryIndexRouteImport.update({
   path: '/gallery/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorkspaceProjectIdRoute = WorkspaceProjectIdRouteImport.update({
+const GalleryImageIdRoute = GalleryImageIdRouteImport.update({
+  id: '/gallery/$imageId',
+  path: '/gallery/$imageId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceProjectIdRouteRoute = WorkspaceProjectIdRouteRouteImport.update({
   id: '/workspace/$projectId',
   path: '/workspace/$projectId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkspaceProjectIdIndexRoute = WorkspaceProjectIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => WorkspaceProjectIdRouteRoute,
+} as any)
+const WorkspaceProjectIdScenesSceneIdRoute =
+  WorkspaceProjectIdScenesSceneIdRouteImport.update({
+    id: '/scenes/$sceneId',
+    path: '/scenes/$sceneId',
+    getParentRoute: () => WorkspaceProjectIdRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/workspace/$projectId': typeof WorkspaceProjectIdRoute
+  '/workspace/$projectId': typeof WorkspaceProjectIdRouteRouteWithChildren
+  '/gallery/$imageId': typeof GalleryImageIdRoute
   '/gallery/': typeof GalleryIndexRoute
   '/settings/': typeof SettingsIndexRoute
+  '/workspace/$projectId/': typeof WorkspaceProjectIdIndexRoute
+  '/workspace/$projectId/scenes/$sceneId': typeof WorkspaceProjectIdScenesSceneIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/workspace/$projectId': typeof WorkspaceProjectIdRoute
+  '/gallery/$imageId': typeof GalleryImageIdRoute
   '/gallery': typeof GalleryIndexRoute
   '/settings': typeof SettingsIndexRoute
+  '/workspace/$projectId': typeof WorkspaceProjectIdIndexRoute
+  '/workspace/$projectId/scenes/$sceneId': typeof WorkspaceProjectIdScenesSceneIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/workspace/$projectId': typeof WorkspaceProjectIdRoute
+  '/workspace/$projectId': typeof WorkspaceProjectIdRouteRouteWithChildren
+  '/gallery/$imageId': typeof GalleryImageIdRoute
   '/gallery/': typeof GalleryIndexRoute
   '/settings/': typeof SettingsIndexRoute
+  '/workspace/$projectId/': typeof WorkspaceProjectIdIndexRoute
+  '/workspace/$projectId/scenes/$sceneId': typeof WorkspaceProjectIdScenesSceneIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/workspace/$projectId' | '/gallery/' | '/settings/'
+  fullPaths:
+    | '/'
+    | '/workspace/$projectId'
+    | '/gallery/$imageId'
+    | '/gallery/'
+    | '/settings/'
+    | '/workspace/$projectId/'
+    | '/workspace/$projectId/scenes/$sceneId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/workspace/$projectId' | '/gallery' | '/settings'
-  id: '__root__' | '/' | '/workspace/$projectId' | '/gallery/' | '/settings/'
+  to:
+    | '/'
+    | '/gallery/$imageId'
+    | '/gallery'
+    | '/settings'
+    | '/workspace/$projectId'
+    | '/workspace/$projectId/scenes/$sceneId'
+  id:
+    | '__root__'
+    | '/'
+    | '/workspace/$projectId'
+    | '/gallery/$imageId'
+    | '/gallery/'
+    | '/settings/'
+    | '/workspace/$projectId/'
+    | '/workspace/$projectId/scenes/$sceneId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  WorkspaceProjectIdRoute: typeof WorkspaceProjectIdRoute
+  WorkspaceProjectIdRouteRoute: typeof WorkspaceProjectIdRouteRouteWithChildren
+  GalleryImageIdRoute: typeof GalleryImageIdRoute
   GalleryIndexRoute: typeof GalleryIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
@@ -92,19 +141,57 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GalleryIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/gallery/$imageId': {
+      id: '/gallery/$imageId'
+      path: '/gallery/$imageId'
+      fullPath: '/gallery/$imageId'
+      preLoaderRoute: typeof GalleryImageIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/workspace/$projectId': {
       id: '/workspace/$projectId'
       path: '/workspace/$projectId'
       fullPath: '/workspace/$projectId'
-      preLoaderRoute: typeof WorkspaceProjectIdRouteImport
+      preLoaderRoute: typeof WorkspaceProjectIdRouteRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/workspace/$projectId/': {
+      id: '/workspace/$projectId/'
+      path: '/'
+      fullPath: '/workspace/$projectId/'
+      preLoaderRoute: typeof WorkspaceProjectIdIndexRouteImport
+      parentRoute: typeof WorkspaceProjectIdRouteRoute
+    }
+    '/workspace/$projectId/scenes/$sceneId': {
+      id: '/workspace/$projectId/scenes/$sceneId'
+      path: '/scenes/$sceneId'
+      fullPath: '/workspace/$projectId/scenes/$sceneId'
+      preLoaderRoute: typeof WorkspaceProjectIdScenesSceneIdRouteImport
+      parentRoute: typeof WorkspaceProjectIdRouteRoute
     }
   }
 }
 
+interface WorkspaceProjectIdRouteRouteChildren {
+  WorkspaceProjectIdIndexRoute: typeof WorkspaceProjectIdIndexRoute
+  WorkspaceProjectIdScenesSceneIdRoute: typeof WorkspaceProjectIdScenesSceneIdRoute
+}
+
+const WorkspaceProjectIdRouteRouteChildren: WorkspaceProjectIdRouteRouteChildren =
+  {
+    WorkspaceProjectIdIndexRoute: WorkspaceProjectIdIndexRoute,
+    WorkspaceProjectIdScenesSceneIdRoute: WorkspaceProjectIdScenesSceneIdRoute,
+  }
+
+const WorkspaceProjectIdRouteRouteWithChildren =
+  WorkspaceProjectIdRouteRoute._addFileChildren(
+    WorkspaceProjectIdRouteRouteChildren,
+  )
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  WorkspaceProjectIdRoute: WorkspaceProjectIdRoute,
+  WorkspaceProjectIdRouteRoute: WorkspaceProjectIdRouteRouteWithChildren,
+  GalleryImageIdRoute: GalleryImageIdRoute,
   GalleryIndexRoute: GalleryIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
 }

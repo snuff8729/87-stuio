@@ -108,6 +108,8 @@ export const getWorkspaceData = createServerFn({ method: 'GET' })
     }
   })
 
+const SCENE_IMAGES_PAGE_SIZE = 50
+
 export const getSceneDetail = createServerFn({ method: 'GET' })
   .inputValidator((projectSceneId: number) => projectSceneId)
   .handler(async ({ data: projectSceneId }) => {
@@ -124,6 +126,12 @@ export const getSceneDetail = createServerFn({ method: 'GET' })
       .where(eq(characterSceneOverrides.projectSceneId, projectSceneId))
       .all()
 
+    const totalCount = db
+      .select({ count: sql<number>`count(*)` })
+      .from(generatedImages)
+      .where(eq(generatedImages.projectSceneId, projectSceneId))
+      .get()?.count ?? 0
+
     const images = db
       .select({
         id: generatedImages.id,
@@ -137,14 +145,36 @@ export const getSceneDetail = createServerFn({ method: 'GET' })
       .from(generatedImages)
       .where(eq(generatedImages.projectSceneId, projectSceneId))
       .orderBy(desc(generatedImages.createdAt))
-      .limit(20)
+      .limit(SCENE_IMAGES_PAGE_SIZE)
       .all()
 
     return {
       scene,
       characterOverrides: overrides,
       images,
+      totalImageCount: totalCount,
     }
+  })
+
+export const getSceneImages = createServerFn({ method: 'GET' })
+  .inputValidator((input: { sceneId: number; offset: number }) => input)
+  .handler(async ({ data: { sceneId, offset } }) => {
+    return db
+      .select({
+        id: generatedImages.id,
+        thumbnailPath: generatedImages.thumbnailPath,
+        filePath: generatedImages.filePath,
+        seed: generatedImages.seed,
+        isFavorite: generatedImages.isFavorite,
+        rating: generatedImages.rating,
+        createdAt: generatedImages.createdAt,
+      })
+      .from(generatedImages)
+      .where(eq(generatedImages.projectSceneId, sceneId))
+      .orderBy(desc(generatedImages.createdAt))
+      .limit(SCENE_IMAGES_PAGE_SIZE)
+      .offset(offset)
+      .all()
   })
 
 // Per-scene image counts (accurate, single GROUP BY query)
@@ -168,6 +198,51 @@ export const getSceneImageCounts = createServerFn({ method: 'GET' })
       }
     }
     return counts
+  })
+
+// Context for standalone scene detail page
+export const getScenePageContext = createServerFn({ method: 'GET' })
+  .inputValidator((data: { projectId: number; sceneId: number }) => data)
+  .handler(async ({ data }) => {
+    const project = db
+      .select({
+        id: projects.id,
+        name: projects.name,
+        generalPrompt: projects.generalPrompt,
+        negativePrompt: projects.negativePrompt,
+      })
+      .from(projects)
+      .where(eq(projects.id, data.projectId))
+      .get()
+    if (!project) throw new Error('Project not found')
+
+    const chars = db
+      .select()
+      .from(characters)
+      .where(eq(characters.projectId, data.projectId))
+      .orderBy(characters.slotIndex)
+      .all()
+
+    const scene = db
+      .select()
+      .from(projectScenes)
+      .where(eq(projectScenes.id, data.sceneId))
+      .get()
+    if (!scene) throw new Error('Scene not found')
+
+    const pack = db
+      .select({ name: projectScenePacks.name })
+      .from(projectScenePacks)
+      .where(eq(projectScenePacks.id, scene.projectScenePackId))
+      .get()
+
+    return {
+      project,
+      characters: chars,
+      sceneName: scene.name,
+      packName: pack?.name ?? 'Unknown',
+      thumbnailImageId: scene.thumbnailImageId,
+    }
   })
 
 // Lightweight fetch for incremental UI updates during generation

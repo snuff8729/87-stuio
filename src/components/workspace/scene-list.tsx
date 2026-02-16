@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Image02Icon } from '@hugeicons/core-free-icons'
 import { NumberStepper } from '@/components/ui/number-stepper'
@@ -14,7 +15,7 @@ interface SceneListProps {
       thumbnailPath: string | null
     }>
   }>
-  onSelectScene: (id: number) => void
+  projectId: number
   sceneCounts: Record<number, number>
   defaultCount: number
   onSceneCountChange: (sceneId: number, count: number | null) => void
@@ -22,7 +23,7 @@ interface SceneListProps {
 
 export function SceneList({
   scenePacks,
-  onSelectScene,
+  projectId,
   sceneCounts,
   defaultCount,
   onSceneCountChange,
@@ -56,9 +57,13 @@ export function SceneList({
                   key={scene.id}
                   className="rounded-lg border border-border bg-card hover:border-primary/50 hover:bg-accent/50 transition-colors group overflow-hidden"
                 >
-                  <button
-                    onClick={() => onSelectScene(scene.id)}
-                    className="w-full text-left"
+                  <Link
+                    to="/workspace/$projectId/scenes/$sceneId"
+                    params={{
+                      projectId: String(projectId),
+                      sceneId: String(scene.id),
+                    }}
+                    className="block w-full text-left"
                   >
                     {scene.thumbnailPath ? (
                       <div className="aspect-[3/2] bg-secondary overflow-hidden">
@@ -92,14 +97,11 @@ export function SceneList({
                         )}
                       </div>
                     </div>
-                  </button>
+                  </Link>
                   <div className="px-2 pb-2 pt-0 flex items-center gap-1.5">
                     <NumberStepper
                       value={sceneCounts[sceneId] ?? null}
-                      onChange={(v) => {
-                        // Clicking stops propagation implicitly (not a link)
-                        onSceneCountChange(sceneId, v)
-                      }}
+                      onChange={(v) => onSceneCountChange(sceneId, v)}
                       min={0}
                       max={100}
                       placeholder={String(defaultCount)}

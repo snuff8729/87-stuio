@@ -1,21 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { Link } from '@tanstack/react-router'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { toast } from 'sonner'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowLeft02Icon, Image02Icon } from '@hugeicons/core-free-icons'
-import { Button } from '@/components/ui/button'
+import { Image02Icon } from '@hugeicons/core-free-icons'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { NumberStepper } from '@/components/ui/number-stepper'
 import { Skeleton } from '@/components/ui/skeleton'
-import { getSceneDetail } from '@/server/functions/workspace'
+import { getSceneDetail, getSceneImages } from '@/server/functions/workspace'
 import { updateProjectScene, upsertCharacterOverride } from '@/server/functions/project-scenes'
 import { updateImage } from '@/server/functions/gallery'
 import { extractPlaceholders } from '@/lib/placeholder'
 
 interface SceneDetailProps {
   sceneId: number
-  sceneName: string
-  packName: string
   characters: Array<{
     id: number
     name: string
@@ -24,34 +22,62 @@ interface SceneDetailProps {
   }>
   generalPrompt: string
   projectId: number
-  onBack: () => void
-  count: number | null
-  defaultCount: number
-  onCountChange: (count: number | null) => void
   thumbnailImageId: number | null
   onThumbnailChange: (imageId: number | null, thumbnailPath?: string | null) => void
   refreshKey?: number
 }
 
 type SceneData = Awaited<ReturnType<typeof getSceneDetail>>
+type ImageItem = SceneData['images'][number]
+
+const GAP = 6 // gap-1.5 = 6px
+
+function useGridColumns() {
+  const [cols, setCols] = useState(4)
+  useEffect(() => {
+    function update() {
+      const w = window.innerWidth
+      // Match: grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-4 xl:grid-cols-5
+      if (w >= 1280) setCols(5)
+      else if (w >= 1024) setCols(4)
+      else if (w >= 768) setCols(5)
+      else if (w >= 640) setCols(4)
+      else setCols(3)
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+  return cols
+}
+
+function findScrollParent(el: HTMLElement | null): HTMLElement | null {
+  let current = el?.parentElement ?? null
+  while (current) {
+    const { overflowY } = getComputedStyle(current)
+    if (overflowY === 'auto' || overflowY === 'scroll') return current
+    current = current.parentElement
+  }
+  return null
+}
 
 export function SceneDetail({
   sceneId,
-  sceneName,
-  packName,
   characters,
   generalPrompt,
-  onBack,
-  count,
-  defaultCount,
-  onCountChange,
+  projectId,
   thumbnailImageId,
   onThumbnailChange,
   refreshKey,
 }: SceneDetailProps) {
-  const [data, setData] = useState<SceneData | null>(null)
   const [loading, setLoading] = useState(true)
   const initialLoadDone = useRef(false)
+
+  // Images with pagination
+  const [images, setImages] = useState<ImageItem[]>([])
+  const [totalImageCount, setTotalImageCount] = useState(0)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const hasMore = images.length < totalImageCount
 
   // Placeholder values (general)
   const [placeholderValues, setPlaceholderValues] = useState<Record<string, string>>({})
@@ -62,16 +88,28 @@ export function SceneDetail({
     if (!silent) setLoading(true)
     try {
       const result = await getSceneDetail({ data: sceneId })
-      setData(result)
+      setTotalImageCount(result.totalImageCount)
 
-      // Only initialize form state on first load (don't overwrite user edits)
+      if (silent) {
+        setImages((prev) => {
+          const existingIds = new Set(prev.map((img) => img.id))
+          const newImages = result.images.filter((img) => !existingIds.has(img.id))
+          if (newImages.length === 0) return prev
+          const updatedMap = new Map(result.images.map((img) => [img.id, img]))
+          const updated = prev.map((img) => updatedMap.get(img.id) ?? img)
+          return [...newImages, ...updated]
+        })
+      } else {
+        setImages(result.images)
+      }
+
       if (!initialLoadDone.current) {
         setPlaceholderValues(JSON.parse(result.scene.placeholders || '{}'))
-        const overrides: Record<number, Record<string, string>> = {}
+        const ov: Record<number, Record<string, string>> = {}
         for (const o of result.characterOverrides) {
-          overrides[o.characterId] = JSON.parse(o.placeholders || '{}')
+          ov[o.characterId] = JSON.parse(o.placeholders || '{}')
         }
-        setCharOverrides(overrides)
+        setCharOverrides(ov)
         initialLoadDone.current = true
       }
     } catch {
@@ -80,20 +118,104 @@ export function SceneDetail({
     if (!silent) setLoading(false)
   }, [sceneId])
 
-  // Initial load
   useEffect(() => {
     initialLoadDone.current = false
     loadScene()
   }, [loadScene])
 
-  // Silent refresh when new images are generated
   useEffect(() => {
     if (refreshKey && initialLoadDone.current) {
       loadScene(true)
     }
   }, [refreshKey, loadScene])
 
-  // Extract placeholder keys from prompts
+  // Load more images
+  const loadMoreRef = useRef(false)
+  const handleLoadMore = useCallback(async () => {
+    if (loadMoreRef.current) return
+    loadMoreRef.current = true
+    setLoadingMore(true)
+    try {
+      const more = await getSceneImages({ data: { sceneId, offset: images.length } })
+      setImages((prev) => {
+        const existingIds = new Set(prev.map((img) => img.id))
+        const deduped = more.filter((img) => !existingIds.has(img.id))
+        return [...prev, ...deduped]
+      })
+    } catch {
+      toast.error('Failed to load more images')
+    }
+    setLoadingMore(false)
+    loadMoreRef.current = false
+  }, [sceneId, images.length])
+
+  // ── Virtualized grid setup ──
+  const cols = useGridColumns()
+  const rootRef = useRef<HTMLDivElement>(null)
+  const gridRef = useRef<HTMLDivElement>(null)
+
+  // Scroll container
+  const [scrollEl, setScrollEl] = useState<HTMLElement | null>(null)
+  useEffect(() => {
+    setScrollEl(findScrollParent(rootRef.current))
+  }, [loading])
+
+  // Grid container width for cell sizing
+  const [gridWidth, setGridWidth] = useState(400)
+  useEffect(() => {
+    const el = gridRef.current
+    if (!el) return
+    const ro = new ResizeObserver(([entry]) => setGridWidth(entry.contentRect.width))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [images.length > 0]) // re-observe when images first appear
+
+  const cellSize = Math.floor((gridWidth - GAP * (cols - 1)) / cols)
+  const rowHeight = cellSize + GAP
+
+  // Scroll margin: offset from scroll container top to grid top
+  const [scrollMargin, setScrollMargin] = useState(0)
+  useEffect(() => {
+    const grid = gridRef.current
+    if (!grid || !scrollEl) return
+    const measure = () => {
+      const gridRect = grid.getBoundingClientRect()
+      const scrollRect = scrollEl.getBoundingClientRect()
+      setScrollMargin(gridRect.top - scrollRect.top + scrollEl.scrollTop)
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    if (rootRef.current) ro.observe(rootRef.current)
+    return () => ro.disconnect()
+  }, [scrollEl])
+
+  // Row virtualizer
+  const rowCount = Math.ceil(images.length / cols)
+  const rowVirtualizer = useVirtualizer({
+    count: rowCount,
+    getScrollElement: () => scrollEl,
+    estimateSize: () => rowHeight,
+    overscan: 3,
+    scrollMargin,
+    gap: 0,
+  })
+
+  // Force re-measurement when dimensions stabilize after mount
+  useEffect(() => {
+    rowVirtualizer.measure()
+  }, [rowVirtualizer, cellSize, scrollMargin])
+
+  // Trigger load more when nearing the end
+  const virtualItems = rowVirtualizer.getVirtualItems()
+  const lastVirtualRow = virtualItems.at(-1)
+  useEffect(() => {
+    if (!lastVirtualRow || !hasMore || loadMoreRef.current) return
+    if (lastVirtualRow.index >= rowCount - 3) {
+      handleLoadMore()
+    }
+  }, [lastVirtualRow?.index, rowCount, hasMore, handleLoadMore])
+
+  // ── Placeholder / override editing ──
   const generalPlaceholders = extractPlaceholders(generalPrompt)
   const charPlaceholders = characters.flatMap((c) => [
     ...extractPlaceholders(c.charPrompt),
@@ -101,13 +223,11 @@ export function SceneDetail({
   ])
   const uniqueCharPlaceholders = [...new Set(charPlaceholders)]
 
-  // Auto-save placeholders (debounced)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   function handlePlaceholderChange(key: string, value: string) {
     const updated = { ...placeholderValues, [key]: value }
     setPlaceholderValues(updated)
-
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(async () => {
       try {
@@ -126,7 +246,6 @@ export function SceneDetail({
       [charId]: { ...(charOverrides[charId] || {}), [key]: value },
     }
     setCharOverrides(updated)
-
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(async () => {
       try {
@@ -146,16 +265,14 @@ export function SceneDetail({
   async function handleToggleFavorite(imageId: number, current: number | null) {
     const newVal = current ? 0 : 1
     await updateImage({ data: { id: imageId, isFavorite: newVal } })
-    if (data) {
-      setData({
-        ...data,
-        images: data.images.map((img) =>
-          img.id === imageId ? { ...img, isFavorite: newVal } : img,
-        ),
-      })
-    }
+    setImages((prev) =>
+      prev.map((img) =>
+        img.id === imageId ? { ...img, isFavorite: newVal } : img,
+      ),
+    )
   }
 
+  // ── Render ──
   if (loading) {
     return (
       <div className="p-4 space-y-4">
@@ -167,40 +284,7 @@ export function SceneDetail({
   }
 
   return (
-    <div className="p-4 space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" onClick={onBack}>
-          <HugeiconsIcon icon={ArrowLeft02Icon} className="size-4" />
-          Back
-        </Button>
-        <div className="h-4 w-px bg-border" />
-        <div className="min-w-0 flex-1">
-          <div className="text-xs text-muted-foreground">{packName}</div>
-          <h2 className="text-sm font-semibold truncate">{sceneName}</h2>
-        </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          <Label className="text-[10px] text-muted-foreground">Count</Label>
-          <NumberStepper
-            value={count}
-            onChange={onCountChange}
-            min={0}
-            max={100}
-            placeholder={String(defaultCount)}
-            size="md"
-          />
-          {count !== null && (
-            <button
-              onClick={() => onCountChange(null)}
-              className="text-xs text-muted-foreground hover:text-foreground"
-              title="Reset to default"
-            >
-              &times;
-            </button>
-          )}
-        </div>
-      </div>
-
+    <div ref={rootRef} className="p-4 space-y-4">
       {/* General Placeholders */}
       {generalPlaceholders.length > 0 && (
         <div className="space-y-2">
@@ -260,12 +344,12 @@ export function SceneDetail({
         </div>
       )}
 
-      {/* Generated Images */}
-      {data && data.images.length > 0 && (
+      {/* Generated Images — Virtualized Grid */}
+      {images.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label className="text-xs text-muted-foreground uppercase tracking-wider">
-              Generated Images ({data.images.length})
+              Generated Images ({totalImageCount})
             </Label>
             {thumbnailImageId !== null && (
               <button
@@ -276,69 +360,118 @@ export function SceneDetail({
               </button>
             )}
           </div>
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-4 xl:grid-cols-5 gap-1.5">
-            {data.images.map((img) => {
-              const isThumbnail = thumbnailImageId === img.id
-              return (
-                <div
-                  key={img.id}
-                  className={`relative group aspect-square rounded-lg overflow-hidden bg-secondary cursor-pointer ${isThumbnail ? 'ring-2 ring-primary' : ''}`}
-                >
-                  {img.thumbnailPath ? (
-                    <img
-                      src={`/api/thumbnails/${img.thumbnailPath.replace('data/thumbnails/', '')}`}
-                      alt=""
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
-                      No thumb
-                    </div>
-                  )}
-                  {/* Overlay buttons */}
-                  <div className="absolute inset-x-0 top-0 flex items-center justify-between p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {/* Set as thumbnail */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onThumbnailChange(
-                          isThumbnail ? null : img.id,
-                          isThumbnail ? null : img.thumbnailPath,
+
+          <div ref={gridRef}>
+            <div
+              style={{
+                height: `${rowVirtualizer.getTotalSize()}px`,
+                position: 'relative',
+                width: '100%',
+              }}
+            >
+              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                const startIdx = virtualRow.index * cols
+                const rowImages = images.slice(startIdx, startIdx + cols)
+
+                return (
+                  <div
+                    key={virtualRow.key}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      transform: `translateY(${virtualRow.start - scrollMargin}px)`,
+                    }}
+                  >
+                    <div style={{ display: 'flex', gap: `${GAP}px` }}>
+                      {rowImages.map((img) => {
+                        const isThumbnail = thumbnailImageId === img.id
+                        return (
+                          <div
+                            key={img.id}
+                            style={{ width: `${cellSize}px`, height: `${cellSize}px` }}
+                            className={`relative group rounded-lg overflow-hidden bg-secondary shrink-0 ${isThumbnail ? 'ring-2 ring-primary' : ''}`}
+                          >
+                            <Link
+                              to="/gallery/$imageId"
+                              params={{ imageId: String(img.id) }}
+                              search={{ project: projectId, projectSceneId: sceneId }}
+                              className="absolute inset-0 z-0"
+                            />
+                            {img.thumbnailPath ? (
+                              <img
+                                src={`/api/thumbnails/${img.thumbnailPath.replace('data/thumbnails/', '')}`}
+                                alt=""
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+                                No thumb
+                              </div>
+                            )}
+                            {/* Overlay buttons */}
+                            <div className="absolute inset-x-0 top-0 flex items-center justify-between p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  onThumbnailChange(
+                                    isThumbnail ? null : img.id,
+                                    isThumbnail ? null : img.thumbnailPath,
+                                  )
+                                }}
+                                className={`p-0.5 ${isThumbnail ? 'text-primary' : 'text-white/70 hover:text-white'}`}
+                                title={isThumbnail ? 'Remove as thumbnail' : 'Set as thumbnail'}
+                              >
+                                <HugeiconsIcon icon={Image02Icon} className="size-3.5" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleToggleFavorite(img.id, img.isFavorite)
+                                }}
+                                aria-label={img.isFavorite ? 'Unfavorite' : 'Favorite'}
+                              >
+                                <span className={`text-sm ${img.isFavorite ? 'text-destructive' : 'text-white/70'}`}>
+                                  {img.isFavorite ? '\u2764' : '\u2661'}
+                                </span>
+                              </button>
+                            </div>
+                            {isThumbnail && (
+                              <div className="absolute bottom-0 inset-x-0 bg-primary/80 text-primary-foreground text-[9px] text-center py-0.5">
+                                Thumbnail
+                              </div>
+                            )}
+                          </div>
                         )
-                      }}
-                      className={`p-0.5 ${isThumbnail ? 'text-primary' : 'text-white/70 hover:text-white'}`}
-                      title={isThumbnail ? 'Remove as thumbnail' : 'Set as thumbnail'}
-                    >
-                      <HugeiconsIcon icon={Image02Icon} className="size-3.5" />
-                    </button>
-                    {/* Favorite */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleToggleFavorite(img.id, img.isFavorite)
-                      }}
-                      aria-label={img.isFavorite ? 'Unfavorite' : 'Favorite'}
-                    >
-                      <span className={`text-sm ${img.isFavorite ? 'text-destructive' : 'text-white/70'}`}>
-                        {img.isFavorite ? '\u2764' : '\u2661'}
-                      </span>
-                    </button>
-                  </div>
-                  {/* Thumbnail badge */}
-                  {isThumbnail && (
-                    <div className="absolute bottom-0 inset-x-0 bg-primary/80 text-primary-foreground text-[9px] text-center py-0.5">
-                      Thumbnail
+                      })}
                     </div>
-                  )}
-                </div>
-              )
-            })}
+                  </div>
+                )
+              })}
+            </div>
           </div>
+
+          {/* Load more indicator */}
+          {hasMore && (
+            <div className="flex justify-center py-2">
+              {loadingMore ? (
+                <span className="text-xs text-muted-foreground">Loading...</span>
+              ) : (
+                <button
+                  onClick={handleLoadMore}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Load more ({images.length} / {totalImageCount})
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
-      {data && data.images.length === 0 && (
+      {!loading && images.length === 0 && (
         <div className="text-center py-8 text-sm text-muted-foreground">
           No images generated for this scene yet.
         </div>
