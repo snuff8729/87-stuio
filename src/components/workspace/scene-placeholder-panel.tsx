@@ -57,9 +57,9 @@ export function ScenePlaceholderPanel({
   // Collapsed state for character sections within Filled
   const [collapsedSections, setCollapsedSections] = useState<Set<number>>(new Set())
   const [previewOpen, setPreviewOpen] = useState(false)
-  const [filledCollapsed, setFilledCollapsed] = useState(false)
+  const [unusedCollapsed, setUnusedCollapsed] = useState(true)
 
-  // Scene Data (extra keys not in prompt)
+  // Unused data (extra keys not in prompt)
   const [addingSceneData, setAddingSceneData] = useState(false)
   const [newSceneDataKey, setNewSceneDataKey] = useState('')
 
@@ -294,42 +294,25 @@ export function ScenePlaceholderPanel({
     }
   }
 
-  // Classified keys for Unfilled/Filled sections
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const classifiedKeys = useMemo(() => {
-    const unfilledGeneral = generalPlaceholderKeys.filter((key) => !getCellValue(key, 'general'))
-    const filledGeneral = generalPlaceholderKeys.filter((key) => !!getCellValue(key, 'general'))
-
-    const unfilledChars: Array<{ char: CharacterData; keys: string[] }> = []
-    const filledChars: Array<{ char: CharacterData; keys: Array<{ key: string; isTemplate: boolean; generalValue: string }> }> = []
-
+  const filledCounts = useMemo(() => {
+    let filled = 0
+    let total = 0
+    for (const key of generalPlaceholderKeys) {
+      total++
+      if (getCellValue(key, 'general')) filled++
+    }
     for (const char of characters) {
       const keys = characterPlaceholderKeys.find((c) => c.characterId === char.id)?.keys ?? []
-      const unfilled: string[] = []
-      const filled: Array<{ key: string; isTemplate: boolean; generalValue: string }> = []
-
       for (const key of keys) {
-        const ownValue = getCellValue(key, char.id)
-        const generalValue = getGeneralValue(key)
-
-        if (!ownValue && !generalValue) {
-          unfilled.push(key)
-        } else {
-          filled.push({ key, isTemplate: !ownValue && !!generalValue, generalValue })
-        }
+        total++
+        if (getEffectiveCharValue(key, char.id)) filled++
       }
-
-      if (unfilled.length > 0) unfilledChars.push({ char, keys: unfilled })
-      if (filled.length > 0) filledChars.push({ char, keys: filled })
     }
-
-    const totalUnfilled = unfilledGeneral.length + unfilledChars.reduce((s, e) => s + e.keys.length, 0)
-    const totalFilled = filledGeneral.length + filledChars.reduce((s, e) => s + e.keys.length, 0)
-
-    return { unfilledGeneral, filledGeneral, unfilledChars, filledChars, totalUnfilled, totalFilled }
+    return { filled, total }
   }, [generalPlaceholderKeys, characters, characterPlaceholderKeys, localValues, scenePlaceholders, characterOverrides])
 
-  const filledCounts = { filled: classifiedKeys.totalFilled, total: classifiedKeys.totalFilled + classifiedKeys.totalUnfilled }
+  const unusedCount = extraGeneralKeys.length + extraCharacterKeys.reduce((s, c) => s + c.keys.length, 0)
 
   return (
     <div className="p-4 space-y-4">
@@ -403,219 +386,165 @@ export function ScenePlaceholderPanel({
           {/* ── Divider ── */}
           <div className="border-t border-border/50 my-1" />
 
-          {/* ── Unfilled / Filled Sections ── */}
-          <div className="space-y-4">
-            {/* Unfilled Section */}
-            {classifiedKeys.totalUnfilled > 0 && (
+          {/* ── All Used Keys ── */}
+          <div className="space-y-2.5">
+            {/* General keys */}
+            {generalPlaceholderKeys.length > 0 && (
               <div className="space-y-2.5">
-                <span className="text-xs font-medium text-amber-500/80 uppercase tracking-wider">
-                  Unfilled ({classifiedKeys.totalUnfilled})
-                </span>
-
-                {/* General unfilled */}
-                {classifiedKeys.unfilledGeneral.length > 0 && (
-                  <div className="space-y-2.5">
-                    {characters.length > 0 && (
-                      <div className="text-xs text-muted-foreground/60">General</div>
-                    )}
-                    {classifiedKeys.unfilledGeneral.map((key) => (
-                      <div key={key} id={`slot-g-${key}`}>
-                        <label className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground mb-1.5">
-                          <StatusDot filled={false} />
-                          <span className="inline-block rounded bg-secondary/80 px-1.5 py-0.5">
-                            {`{{${key}}}`}
-                          </span>
-                        </label>
-                        <textarea
-                          value={getCellValue(key, 'general')}
-                          onChange={(e) => handleCellChange('general', key, e.target.value)}
-                          rows={4}
-                          className="w-full rounded-lg border border-border bg-input/30 px-3 py-2 text-base font-mono placeholder:text-muted-foreground/40 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 focus:outline-none resize-y min-h-[5rem] transition-all"
-                          placeholder={`Value for ${key}...`}
-                        />
-                      </div>
-                    ))}
-                  </div>
+                {characters.length > 0 && (
+                  <div className="text-xs text-muted-foreground/60">General</div>
                 )}
-
-                {/* Character unfilled */}
-                {classifiedKeys.unfilledChars.map(({ char, keys }) => (
-                  <div key={char.id} className="space-y-2.5">
-                    <div className="text-xs text-muted-foreground/60">{char.name}</div>
-                    {keys.map((key) => (
-                      <div key={key} id={`slot-c-${char.id}-${key}`}>
-                        <label className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground mb-1.5">
-                          <StatusDot filled={false} />
-                          <span className="inline-block rounded bg-secondary/80 px-1.5 py-0.5">
-                            {`{{${key}}}`}
-                          </span>
-                        </label>
-                        <textarea
-                          value={getCellValue(key, char.id)}
-                          onChange={(e) => handleCellChange(char.id, key, e.target.value)}
-                          rows={4}
-                          className="w-full rounded-lg border border-border bg-input/30 px-3 py-2 text-base font-mono placeholder:text-muted-foreground/40 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 focus:outline-none resize-y min-h-[5rem] transition-all"
-                          placeholder={`${char.name}: ${key}...`}
-                        />
-                      </div>
-                    ))}
+                {generalPlaceholderKeys.map((key) => (
+                  <div key={key} id={`slot-g-${key}`}>
+                    <label className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground mb-1.5">
+                      <StatusDot filled={!!getCellValue(key, 'general')} />
+                      <span className="inline-block rounded bg-secondary/80 px-1.5 py-0.5">
+                        {`\\\\${key}\\\\`}
+                      </span>
+                    </label>
+                    <textarea
+                      value={getCellValue(key, 'general')}
+                      onChange={(e) => handleCellChange('general', key, e.target.value)}
+                      rows={4}
+                      className="w-full rounded-lg border border-border bg-input/30 px-3 py-2 text-base font-mono placeholder:text-muted-foreground/40 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 focus:outline-none resize-y min-h-[5rem] transition-all"
+                      placeholder={`Value for ${key}...`}
+                    />
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Filled Section */}
-            {classifiedKeys.totalFilled > 0 && (
-              <div>
+            {/* Character keys in collapsible groups */}
+            {characters.map((char) => {
+              const keys = characterPlaceholderKeys.find((c) => c.characterId === char.id)?.keys ?? []
+              if (keys.length === 0) return null
+              const isCollapsed = collapsedSections.has(char.id)
+              return (
+                <div key={char.id} className="rounded-lg bg-secondary/15 border-l-2 border-primary/30">
+                  <button
+                    onClick={() => toggleSection(char.id)}
+                    className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-secondary/25 transition-colors rounded-t-lg"
+                  >
+                    <span className="text-base font-medium">{char.name}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-muted-foreground tabular-nums">{keys.length}</span>
+                      <HugeiconsIcon
+                        icon={ArrowDown01Icon}
+                        className={`size-5 text-muted-foreground transition-transform duration-200 ${isCollapsed ? '-rotate-90' : ''}`}
+                      />
+                    </div>
+                  </button>
+
+                  {!isCollapsed && (
+                    <div className="px-4 pb-3 space-y-2.5">
+                      {keys.map((key) => {
+                        const ownValue = getCellValue(key, char.id)
+                        const generalValue = getGeneralValue(key)
+                        const isFilled = !!ownValue
+                        const isTemplate = !ownValue && !!generalValue
+                        return (
+                          <div key={key} id={`slot-c-${char.id}-${key}`}>
+                            <label className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground mb-1.5">
+                              <StatusDot filled={isFilled || isTemplate} template={isTemplate} />
+                              <span className="inline-block rounded bg-secondary/80 px-1.5 py-0.5">
+                                {`\\\\${key}\\\\`}
+                              </span>
+                              {isTemplate && (
+                                <span className="text-[10px] text-amber-500/80 bg-amber-500/10 rounded px-1 py-0.5">General</span>
+                              )}
+                            </label>
+                            <textarea
+                              value={getCellValue(key, char.id)}
+                              onChange={(e) => handleCellChange(char.id, key, e.target.value)}
+                              rows={4}
+                              className="w-full rounded-lg border border-border bg-input/30 px-3 py-2 text-base font-mono placeholder:text-muted-foreground/40 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 focus:outline-none resize-y min-h-[5rem] transition-all"
+                              placeholder={generalValue ? `← General: ${generalValue}` : `${char.name}: ${key}...`}
+                            />
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {/* ── Unused Section ── */}
+          {unusedCount > 0 && (
+            <>
+              <div className="border-t border-border/50 my-1" />
+              <div className="space-y-2.5">
                 <button
-                  onClick={() => setFilledCollapsed(!filledCollapsed)}
+                  onClick={() => setUnusedCollapsed(!unusedCollapsed)}
                   className="w-full flex items-center justify-between text-left py-1"
                 >
                   <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Filled ({classifiedKeys.totalFilled})
+                    Unused ({unusedCount})
                   </span>
                   <HugeiconsIcon
                     icon={ArrowDown01Icon}
-                    className={`size-4 text-muted-foreground transition-transform duration-200 ${filledCollapsed ? '-rotate-90' : ''}`}
+                    className={`size-4 text-muted-foreground transition-transform duration-200 ${unusedCollapsed ? '-rotate-90' : ''}`}
                   />
                 </button>
 
-                {!filledCollapsed && (
-                  <div className="mt-2.5 space-y-2.5">
-                    {/* General filled */}
-                    {classifiedKeys.filledGeneral.length > 0 && (
-                      <div className="space-y-2.5">
-                        {characters.length > 0 && (
-                          <div className="text-xs text-muted-foreground/60">General</div>
-                        )}
-                        {classifiedKeys.filledGeneral.map((key) => (
-                          <div key={key} id={`slot-g-${key}`}>
-                            <label className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground mb-1.5">
-                              <StatusDot filled={true} />
-                              <span className="inline-block rounded bg-secondary/80 px-1.5 py-0.5">
-                                {`{{${key}}}`}
-                              </span>
-                            </label>
-                            <textarea
-                              value={getCellValue(key, 'general')}
-                              onChange={(e) => handleCellChange('general', key, e.target.value)}
-                              rows={4}
-                              className="w-full rounded-lg border border-border bg-input/30 px-3 py-2 text-base font-mono placeholder:text-muted-foreground/40 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 focus:outline-none resize-y min-h-[5rem] transition-all"
-                              placeholder={`Value for ${key}...`}
-                            />
-                          </div>
-                        ))}
+                {!unusedCollapsed && (
+                  <div className="space-y-2.5">
+                    {extraGeneralKeys.map((key) => (
+                      <div key={key} className="flex items-center gap-2">
+                        <span className="text-xs font-mono text-muted-foreground/70 shrink-0 min-w-0 truncate max-w-[8rem]" title={key}>{key}</span>
+                        <input
+                          type="text"
+                          value={getCellValue(key, 'general')}
+                          onChange={(e) => handleCellChange('general', key, e.target.value)}
+                          className="flex-1 h-8 rounded-lg border border-dashed border-border bg-input/20 px-2.5 text-sm font-mono placeholder:text-muted-foreground/40 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 focus:outline-none transition-all min-w-0"
+                          placeholder={`Value for ${key}`}
+                        />
+                        <button
+                          onClick={() => handleRemoveGeneralKey(key)}
+                          className="text-muted-foreground/50 hover:text-destructive transition-colors p-1 rounded shrink-0"
+                          title={`Remove ${key}`}
+                        >
+                          <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
+                        </button>
                       </div>
+                    ))}
+
+                    {addingSceneData ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={newSceneDataKey}
+                          onChange={(e) => setNewSceneDataKey(e.target.value)}
+                          placeholder="Key name"
+                          className="h-8 text-sm w-32 font-mono"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleAddSceneDataKey()
+                            if (e.key === 'Escape') { setAddingSceneData(false); setNewSceneDataKey('') }
+                          }}
+                        />
+                        <Button size="xs" onClick={handleAddSceneDataKey} disabled={!newSceneDataKey.trim()}>Add</Button>
+                        <Button size="xs" variant="ghost" onClick={() => { setAddingSceneData(false); setNewSceneDataKey('') }}>Cancel</Button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setAddingSceneData(true)}
+                        className="flex items-center gap-1 text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors py-1 px-2 rounded-lg border border-dashed border-border/50 hover:border-border"
+                      >
+                        <HugeiconsIcon icon={Add01Icon} className="size-3.5" />
+                        Add Data
+                      </button>
                     )}
-
-                    {/* Character filled */}
-                    {classifiedKeys.filledChars.map(({ char, keys }) => {
-                      const isCollapsed = collapsedSections.has(char.id)
-                      return (
-                        <div key={char.id} className="rounded-lg bg-secondary/15 border-l-2 border-primary/30">
-                          <button
-                            onClick={() => toggleSection(char.id)}
-                            className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-secondary/25 transition-colors rounded-t-lg"
-                          >
-                            <span className="text-base font-medium">{char.name}</span>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-xs text-muted-foreground tabular-nums">{keys.length}</span>
-                              <HugeiconsIcon
-                                icon={ArrowDown01Icon}
-                                className={`size-5 text-muted-foreground transition-transform duration-200 ${isCollapsed ? '-rotate-90' : ''}`}
-                              />
-                            </div>
-                          </button>
-
-                          {!isCollapsed && (
-                            <div className="px-4 pb-3 space-y-2.5">
-                              {keys.map(({ key, isTemplate, generalValue }) => (
-                                <div key={key} id={`slot-c-${char.id}-${key}`}>
-                                  <label className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground mb-1.5">
-                                    <StatusDot filled={true} template={isTemplate} />
-                                    <span className="inline-block rounded bg-secondary/80 px-1.5 py-0.5">
-                                      {`{{${key}}}`}
-                                    </span>
-                                    {isTemplate && (
-                                      <span className="text-[10px] text-amber-500/80 bg-amber-500/10 rounded px-1 py-0.5">General</span>
-                                    )}
-                                  </label>
-                                  <textarea
-                                    value={getCellValue(key, char.id)}
-                                    onChange={(e) => handleCellChange(char.id, key, e.target.value)}
-                                    rows={4}
-                                    className="w-full rounded-lg border border-border bg-input/30 px-3 py-2 text-base font-mono placeholder:text-muted-foreground/40 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 focus:outline-none resize-y min-h-[5rem] transition-all"
-                                    placeholder={generalValue ? `\u2190 General: ${generalValue}` : `${char.name}: ${key}...`}
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
                   </div>
                 )}
               </div>
-            )}
-          </div>
-
-          {/* ── Scene Data Section ── */}
-          <div className="border-t border-border/50 my-1" />
-          <div className="space-y-2.5">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Scene Data</span>
-
-            {extraGeneralKeys.map((key) => (
-              <div key={key} className="flex items-center gap-2">
-                <span className="text-xs font-mono text-muted-foreground/70 shrink-0 min-w-0 truncate max-w-[8rem]" title={key}>{key}</span>
-                <input
-                  type="text"
-                  value={getCellValue(key, 'general')}
-                  onChange={(e) => handleCellChange('general', key, e.target.value)}
-                  className="flex-1 h-8 rounded-lg border border-dashed border-border bg-input/20 px-2.5 text-sm font-mono placeholder:text-muted-foreground/40 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 focus:outline-none transition-all min-w-0"
-                  placeholder={`Value for ${key}`}
-                />
-                <button
-                  onClick={() => handleRemoveGeneralKey(key)}
-                  className="text-muted-foreground/50 hover:text-destructive transition-colors p-1 rounded shrink-0"
-                  title={`Remove ${key}`}
-                >
-                  <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
-                </button>
-              </div>
-            ))}
-
-            {addingSceneData ? (
-              <div className="flex items-center gap-2">
-                <Input
-                  value={newSceneDataKey}
-                  onChange={(e) => setNewSceneDataKey(e.target.value)}
-                  placeholder="Key name"
-                  className="h-8 text-sm w-32 font-mono"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleAddSceneDataKey()
-                    if (e.key === 'Escape') { setAddingSceneData(false); setNewSceneDataKey('') }
-                  }}
-                />
-                <Button size="xs" onClick={handleAddSceneDataKey} disabled={!newSceneDataKey.trim()}>Add</Button>
-                <Button size="xs" variant="ghost" onClick={() => { setAddingSceneData(false); setNewSceneDataKey('') }}>Cancel</Button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setAddingSceneData(true)}
-                className="flex items-center gap-1 text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors py-1 px-2 rounded-lg border border-dashed border-border/50 hover:border-border"
-              >
-                <HugeiconsIcon icon={Add01Icon} className="size-3.5" />
-                Add Data
-              </button>
-            )}
-          </div>
+            </>
+          )}
         </>
       ) : extraGeneralKeys.length > 0 ? (
-        /* No prompt keys but has scene data */
+        /* No prompt keys but has unused data */
         <div className="space-y-2.5">
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Scene Data</span>
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Unused ({extraGeneralKeys.length})</span>
 
           {extraGeneralKeys.map((key) => (
             <div key={key} className="flex items-center gap-2">
@@ -638,7 +567,7 @@ export function ScenePlaceholderPanel({
           ))}
 
           <p className="text-xs text-muted-foreground/50 mt-2">
-            Add {'{{placeholders}}'} to your prompts to create key slots.
+            Add {'\\\\placeholders\\\\'} to your prompts to create key slots.
           </p>
         </div>
       ) : (
@@ -647,7 +576,7 @@ export function ScenePlaceholderPanel({
             <HugeiconsIcon icon={TextIcon} className="size-6 text-muted-foreground/25" />
           </div>
           <p className="text-sm text-muted-foreground max-w-48">
-            Add {'{{placeholders}}'} to your prompts to create key slots.
+            Add {'\\\\placeholders\\\\'} to your prompts to create key slots.
           </p>
         </div>
       )}

@@ -1,4 +1,4 @@
-const PLACEHOLDER_RE = /\{\{(\w+)\}\}/g
+const PLACEHOLDER_RE = /\\\\(\w+)\\\\/g
 
 export function extractPlaceholders(template: string): string[] {
   const keys = new Set<string>()

@@ -539,7 +539,7 @@ function SceneAccordionItem({
                     key={k}
                     className="text-xs text-muted-foreground font-mono bg-secondary/60 rounded px-1.5 py-0.5"
                   >
-                    {`{{${k}}}`}
+                    {`\\\\${k}\\\\`}
                   </span>
                 ))}
               </div>
@@ -719,7 +719,7 @@ function SceneEditPanel({
           {Object.entries(values).map(([key, val]) => (
             <div key={key} className="flex gap-2 items-start">
               <span className="text-sm font-mono text-muted-foreground min-w-20 sm:min-w-24 pt-2.5 shrink-0 inline-block rounded bg-secondary/60 px-2 py-1 text-center truncate">
-                {`{{${key}}}`}
+                {`\\\\${key}\\\\`}
               </span>
               <Textarea
                 value={val}

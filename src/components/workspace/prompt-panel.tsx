@@ -86,14 +86,24 @@ export function PromptPanel({
   const [addOpen, setAddOpen] = useState(false)
   const [newCharName, setNewCharName] = useState('')
 
+  // Ref to track a just-added character ID (prevents the deletion useEffect from resetting activeContext
+  // before router.invalidate() delivers fresh characters data)
+  const pendingCharIdRef = useRef<number | null>(null)
+
   // When selected character is deleted, select first remaining or show empty state
   useEffect(() => {
     if (isCharacterTab && typeof activeContext === 'number' && !characters.find((c) => c.id === activeContext)) {
+      // Skip reset if this is a just-added character waiting for data refresh
+      if (pendingCharIdRef.current === activeContext) return
       if (characters.length > 0) {
         switchToCharacter(characters[0].id)
       } else {
         setActiveContext('character')
       }
+    }
+    // Clear pending flag once the character appears in the array
+    if (pendingCharIdRef.current && characters.find((c) => c.id === pendingCharIdRef.current)) {
+      pendingCharIdRef.current = null
     }
   }, [characters, activeContext]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -196,11 +206,16 @@ export function PromptPanel({
       setNewCharName('')
       setAddOpen(false)
       toast.success('Character added')
-      router.invalidate()
-      // Auto-switch to the new character
+      // Mark as pending so the deletion useEffect doesn't reset activeContext
+      // before router.invalidate() delivers fresh characters data
       if (result?.id) {
-        switchToCharacter(result.id)
+        pendingCharIdRef.current = result.id
+        flushCharSave()
+        setActiveContext(result.id)
+        setCharPrompt(result.charPrompt ?? '')
+        setCharNegative(result.charNegative ?? '')
       }
+      router.invalidate()
     } catch {
       toast.error('Failed to add character')
     }
@@ -219,10 +234,10 @@ export function PromptPanel({
   return (
     <div className="p-3 space-y-3">
       {/* Top-level tabs: General / Character(n) */}
-      <div className="flex items-center bg-muted rounded-4xl p-[3px] h-9 min-w-0">
+      <div className="flex items-center bg-muted rounded-lg p-[3px] h-9 min-w-0">
         <button
           onClick={switchToGeneral}
-          className={`flex-1 h-full rounded-3xl text-sm font-medium transition-all ${
+          className={`flex-1 h-full rounded-md text-sm font-medium transition-all ${
             !isCharacterTab
               ? 'bg-background text-foreground shadow-sm'
               : 'text-muted-foreground hover:text-foreground'
@@ -232,7 +247,7 @@ export function PromptPanel({
         </button>
         <button
           onClick={switchToCharacterTab}
-          className={`flex-1 h-full rounded-3xl text-sm font-medium transition-all ${
+          className={`flex-1 h-full rounded-md text-sm font-medium transition-all ${
             isCharacterTab
               ? 'bg-background text-foreground shadow-sm'
               : 'text-muted-foreground hover:text-foreground'
@@ -358,8 +373,8 @@ export function PromptPanel({
               onChange={handlePromptChange}
               placeholder={
                 isCharacterTab
-                  ? `${activeChar?.name} prompt with {{placeholders}}...`
-                  : 'Enter general prompt with {{placeholders}}...'
+                  ? `${activeChar?.name} prompt with \\\\placeholders\\\\...`
+                  : 'Enter general prompt with \\\\placeholders\\\\...'
               }
               minHeight="200px"
             />
@@ -371,7 +386,7 @@ export function PromptPanel({
                     variant={isCharacterTab ? 'outline' : 'secondary'}
                     className="text-xs"
                   >
-                    {`{{${p}}}`}
+                    {`\\\\${p}\\\\`}
                   </Badge>
                 ))}
               </div>
@@ -401,7 +416,7 @@ export function PromptPanel({
                     variant={isCharacterTab ? 'outline' : 'secondary'}
                     className="text-xs"
                   >
-                    {`{{${p}}}`}
+                    {`\\\\${p}\\\\`}
                   </Badge>
                 ))}
               </div>

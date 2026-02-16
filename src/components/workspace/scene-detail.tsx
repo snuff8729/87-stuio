@@ -328,7 +328,7 @@ export function SceneDetail({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {generalPlaceholders.map((key) => (
               <div key={key} className="space-y-1">
-                <label className="text-sm font-mono text-muted-foreground">{`{{${key}}}`}</label>
+                <label className="text-sm font-mono text-muted-foreground">{`\\\\${key}\\\\`}</label>
                 <Input
                   value={placeholderValues[key] ?? ''}
                   onChange={(e) => handlePlaceholderChange(key, e.target.value)}
@@ -360,17 +360,20 @@ export function SceneDetail({
               <div key={char.id} className="space-y-1.5 pl-3 border-l-2 border-border">
                 <span className="text-sm font-medium">{char.name}</span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {charSpecificPlaceholders.map((key) => (
-                    <div key={key} className="space-y-1">
-                      <label className="text-sm font-mono text-muted-foreground">{`{{${key}}}`}</label>
-                      <Input
-                        value={charOverrides[char.id]?.[key] ?? ''}
-                        onChange={(e) => handleCharOverrideChange(char.id, key, e.target.value)}
-                        className="h-8 text-base"
-                        placeholder={`Value for ${key}`}
-                      />
-                    </div>
-                  ))}
+                  {charSpecificPlaceholders.map((key) => {
+                    const generalVal = placeholderValues[key]
+                    return (
+                      <div key={key} className="space-y-1">
+                        <label className="text-sm font-mono text-muted-foreground">{`\\\\${key}\\\\`}</label>
+                        <Input
+                          value={charOverrides[char.id]?.[key] ?? ''}
+                          onChange={(e) => handleCharOverrideChange(char.id, key, e.target.value)}
+                          className="h-8 text-base"
+                          placeholder={generalVal ? `\u2190 ${generalVal}` : `Value for ${key}`}
+                        />
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )

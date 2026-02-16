@@ -88,52 +88,8 @@ export async function generateImage(
         },
         legacy_uc: false
       },
-      // width: params.width ?? 832,
-      // height: params.height ?? 1216,
-      // n_samples: 1,
-      // seed,
-      // prompt: prompts.generalPrompt,
-      // negative_prompt: prompts.negativePrompt,
-      // steps: params.steps ?? 28,
-      // scale: params.cfg_scale ?? 5,
-      // cfg_rescale: params.cfg_rescale ?? 0,
-      // sampler: params.sampler ?? 'k_euler_ancestral',
-      // scheduler: params.scheduler ?? 'karras',
-      // noise_schedule: params.scheduler ?? 'karras',
-      // extra_noise_seed: seed,
-      // smea: params.smea ?? true,
-      // smea_dyn: params.smea_dyn ?? true,
-      // variety: params.variety ?? false,
-      // qualityToggle: params.qualityToggle ?? true,
-      // ucPreset: params.ucPreset ?? 0,
-      // params_version: 3,
-      // legacy_v3_extend: false,
-      // image_format: params.imageFormat ?? 'png',
-      // v4_prompt: {
-      //   caption: {
-      //     base_caption: prompts.generalPrompt,
-      //     char_captions: charCaptions,
-      //   },
-      //   use_coords: useCoords,
-      //   use_order: true,
-      // },
-      // v4_negative_prompt: {
-      //   caption: {
-      //     base_caption: prompts.negativePrompt,
-      //     char_captions: negCharCaptions,
-      //   },
-      // },
-      // characterPrompts: prompts.characterPrompts.map((cp) => ({
-      //   prompt: cp.prompt,
-      //   negative: cp.negative,
-      //   enabled: true,
-      //   position: { x: 0, y: 0 },
-      // })),
-      // characterPositionEnabled: useCoords,
     },
   }
-
-  console.log('[NAI] Request body:', JSON.stringify(body, null, 2))
 
   const response = await fetch(NAI_API_URL, {
     method: 'POST',

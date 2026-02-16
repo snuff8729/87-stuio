@@ -74,12 +74,17 @@ export function synthesizePrompts(
   )
 
   const characterPrompts = chars.map((char) => {
-    const charPlaceholders = overrideMap.get(char.id) || {}
+    const charOverrides = overrideMap.get(char.id) || {}
+    // General values as base, non-empty character overrides take priority
+    const nonEmptyOverrides = Object.fromEntries(
+      Object.entries(charOverrides).filter(([_, v]) => v !== ''),
+    )
+    const mergedPlaceholders = { ...scenePlaceholders, ...nonEmptyOverrides }
     return {
       characterId: char.id,
       name: char.name,
-      prompt: resolvePlaceholders(char.charPrompt, charPlaceholders),
-      negative: resolvePlaceholders(char.charNegative, charPlaceholders),
+      prompt: resolvePlaceholders(char.charPrompt, mergedPlaceholders),
+      negative: resolvePlaceholders(char.charNegative, mergedPlaceholders),
     }
   })
 
