@@ -94,26 +94,26 @@ export function ParameterPopover({ params, onChange }: ParameterPopoverProps) {
             />
           </div>
           <div className="space-y-1">
-            <ParamLabel name="cfg_scale" label="CFG Scale" />
+            <ParamLabel name="scale" label="CFG Scale" />
             <Input
               type="number"
               min={0}
               max={20}
               step={0.1}
-              value={String(params.cfg_scale ?? 5)}
-              onChange={(e) => set('cfg_scale', Number(e.target.value))}
+              value={String(params.scale ?? 5)}
+              onChange={(e) => set('scale', Number(e.target.value))}
               className="h-7 text-sm"
             />
           </div>
           <div className="space-y-1">
-            <ParamLabel name="cfg_rescale" label="CFG Rescale" />
+            <ParamLabel name="cfgRescale" label="CFG Rescale" />
             <Input
               type="number"
               min={0}
               max={1}
               step={0.01}
-              value={String(params.cfg_rescale ?? 0)}
-              onChange={(e) => set('cfg_rescale', Number(e.target.value))}
+              value={String(params.cfgRescale ?? 0)}
+              onChange={(e) => set('cfgRescale', Number(e.target.value))}
               className="h-7 text-sm"
             />
           </div>
@@ -175,19 +175,11 @@ export function ParameterPopover({ params, onChange }: ParameterPopoverProps) {
         <div className="flex flex-wrap gap-x-4 gap-y-2 mt-3">
           <div className="flex items-center gap-1.5">
             <Checkbox
-              id="param-smea"
-              checked={Boolean(params.smea)}
-              onCheckedChange={(checked) => set('smea', checked)}
+              id="param-autoSmea"
+              checked={Boolean(params.autoSmea)}
+              onCheckedChange={(checked) => set('autoSmea', checked)}
             />
-            <ParamLabel name="smea" label="SMEA" />
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Checkbox
-              id="param-smea-dyn"
-              checked={Boolean(params.smea_dyn)}
-              onCheckedChange={(checked) => set('smea_dyn', checked)}
-            />
-            <ParamLabel name="smea_dyn" label="SMEA Dyn" />
+            <ParamLabel name="autoSmea" label="AutoSmea" />
           </div>
           <div className="flex items-center gap-1.5">
             <Checkbox

@@ -197,16 +197,6 @@ drizzle.config.ts              # Drizzle Kit 설정
 - **ZIP 형식**으로 이미지 데이터 반환
 - ZIP 압축 해제 후 이미지 파일 추출하여 `data/images/{projectId}/`에 저장
 
-### 요청 파라미터 (NAI_metadata_CLAUDE.md 참조)
-- `prompt`, `negative_prompt`: 프롬프트 텍스트
-- `model`, `width`, `height`, `steps`, `cfg_scale`, `cfg_rescale`, `sampler`, `scheduler`, `seed`
-- `smea`, `smea_dyn`, `variety`: boolean 옵션
-- `qualityToggle`: Quality Tags 자동 추가 여부
-- `ucPreset`: Undesired Content 프리셋 (0=Heavy, 1=Light, 2=Furry, 3=Human, 4=None)
-- `imageFormat`: 'png' | 'webp'
-- `characterPrompts[]`: { prompt, negative, enabled, position: {x, y} } — V4 캐릭터 프롬프트
-- `characterPositionEnabled`: 위치 기능 활성화 여부
-
 ## DB 스키마 (Drizzle ORM)
 
 ### projects
