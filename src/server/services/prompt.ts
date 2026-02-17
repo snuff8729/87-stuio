@@ -91,7 +91,7 @@ export function synthesizePrompts(
     }
   })
 
-  log.info('synthesize', 'Prompts synthesized', {
+  log.debug('synthesize', 'Prompts synthesized', {
     projectId,
     sceneId: projectSceneId,
     characterCount: chars.length,

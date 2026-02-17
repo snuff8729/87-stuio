@@ -15,7 +15,8 @@ const LEVEL_PRIORITY: Record<LogLevel, number> = {
   debug: 3,
 }
 
-const MIN_LEVEL: LogLevel = process.env.NODE_ENV === 'production' ? 'info' : 'debug'
+const FILE_MIN_LEVEL: LogLevel = 'debug'
+const CONSOLE_MIN_LEVEL: LogLevel = 'info'
 
 interface LogEntry {
   timestamp: string
@@ -74,11 +75,15 @@ function rotate(): void {
   currentSize = 0
 }
 
+function shouldLog(level: LogLevel, minLevel: LogLevel): boolean {
+  return LEVEL_PRIORITY[level] <= LEVEL_PRIORITY[minLevel]
+}
+
 function writeLog(entry: LogEntry): void {
   const line = JSON.stringify(entry) + '\n'
 
-  // Console output in development
-  if (process.env.NODE_ENV !== 'production') {
+  // Console output
+  if (shouldLog(entry.level, CONSOLE_MIN_LEVEL)) {
     const levelTag = `[${entry.level.toUpperCase()}]`
     const prefix = `${levelTag} [${entry.service}] ${entry.action}`
     if (entry.level === 'error') {
@@ -106,7 +111,7 @@ function writeLog(entry: LogEntry): void {
 
 export function createLogger(service: string): Logger {
   function log(level: LogLevel, action: string, message: string, data?: Record<string, unknown>, error?: unknown): void {
-    if (LEVEL_PRIORITY[level] > LEVEL_PRIORITY[MIN_LEVEL]) return
+    if (!shouldLog(level, FILE_MIN_LEVEL)) return
 
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
