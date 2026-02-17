@@ -158,74 +158,77 @@ async function processQueue() {
 
   log.info('queue.start', 'Queue processing started', { queueLength: queue.length, totalImages: initialTotal })
 
-  while (queue.length > 0) {
-    if (queueStopped) {
-      log.info('queue.stopped', 'Queue stopped', { reason: queueStopped })
-      processing = false
-      return
+  try {
+    while (queue.length > 0) {
+      if (queueStopped) {
+        log.info('queue.stopped', 'Queue stopped', { reason: queueStopped })
+        return
+      }
+      const jobId = queue.shift()!
+      await processJob(jobId)
     }
-    const jobId = queue.shift()!
-    await processJob(jobId)
+
+    const durationMs = batchTiming ? Date.now() - batchTiming.startedAt : 0
+    log.info('queue.complete', 'Queue processing completed', { totalImages: batchTiming?.completedImages ?? 0, durationMs })
+  } catch (error) {
+    log.error('queue.unexpectedError', 'Unexpected error in queue processing', {}, error)
+  } finally {
+    processing = false
+    // batchTiming is kept so the last poll can still read it.
+    // Next processQueue() will reset it (completedImages === totalImages → isResume=false).
   }
-
-  const durationMs = Date.now() - batchTiming!.startedAt
-  log.info('queue.complete', 'Queue processing completed', { totalImages: batchTiming!.completedImages, durationMs })
-
-  processing = false
-  // batchTiming is kept so the last poll can still read it.
-  // Next processQueue() will reset it (completedImages === totalImages → isResume=false).
 }
 
 async function processJob(jobId: number) {
-  const job = db
-    .select()
-    .from(generationJobs)
-    .where(eq(generationJobs.id, jobId))
-    .get()
-  if (!job || job.status === 'cancelled') return
+  try {
+    const job = db
+      .select()
+      .from(generationJobs)
+      .where(eq(generationJobs.id, jobId))
+      .get()
+    if (!job || job.status === 'cancelled') return
 
-  log.info('job.start', 'Starting generation job', {
-    jobId, projectId: job.projectId, sceneId: job.projectSceneId, totalCount: job.totalCount ?? 1,
-  })
+    log.info('job.start', 'Starting generation job', {
+      jobId, projectId: job.projectId, sceneId: job.projectSceneId, totalCount: job.totalCount ?? 1,
+    })
 
-  // Get API key
-  const apiKeyRow = db
-    .select()
-    .from(settings)
-    .where(eq(settings.key, 'nai_api_key'))
-    .get()
-  if (!apiKeyRow?.value) {
-    log.error('job.noApiKey', 'No API key configured', { jobId })
+    // Get API key
+    const apiKeyRow = db
+      .select()
+      .from(settings)
+      .where(eq(settings.key, 'nai_api_key'))
+      .get()
+    if (!apiKeyRow?.value) {
+      log.error('job.noApiKey', 'No API key configured', { jobId })
+      db.update(generationJobs)
+        .set({ status: 'failed', errorMessage: 'API 키가 설정되지 않았습니다', updatedAt: new Date().toISOString() })
+        .where(eq(generationJobs.id, jobId))
+        .run()
+      queueStopped = 'error'
+      stoppedJobId = jobId
+      return
+    }
+
+    // Get delay setting
+    const delayRow = db
+      .select()
+      .from(settings)
+      .where(eq(settings.key, 'generation_delay'))
+      .get()
+    const delay = delayRow ? Number(delayRow.value) : 500
+
+    // Mark as running
     db.update(generationJobs)
-      .set({ status: 'failed', errorMessage: 'API 키가 설정되지 않았습니다', updatedAt: new Date().toISOString() })
+      .set({ status: 'running', updatedAt: new Date().toISOString() })
       .where(eq(generationJobs.id, jobId))
       .run()
-    queueStopped = 'error'
-    stoppedJobId = jobId
-    return
-  }
 
-  // Get delay setting
-  const delayRow = db
-    .select()
-    .from(settings)
-    .where(eq(settings.key, 'generation_delay'))
-    .get()
-  const delay = delayRow ? Number(delayRow.value) : 500
+    const resolvedPrompts = JSON.parse(job.resolvedPrompts)
+    const resolvedParameters = JSON.parse(job.resolvedParameters)
+    const totalCount = job.totalCount ?? 1
 
-  // Mark as running
-  db.update(generationJobs)
-    .set({ status: 'running', updatedAt: new Date().toISOString() })
-    .where(eq(generationJobs.id, jobId))
-    .run()
+    const startIndex = job.completedCount ?? 0
 
-  const resolvedPrompts = JSON.parse(job.resolvedPrompts)
-  const resolvedParameters = JSON.parse(job.resolvedParameters)
-  const totalCount = job.totalCount ?? 1
-
-  const startIndex = job.completedCount ?? 0
-
-  try {
     for (let i = startIndex; i < totalCount; i++) {
       // Check if paused
       if (queueStopped === 'paused') {

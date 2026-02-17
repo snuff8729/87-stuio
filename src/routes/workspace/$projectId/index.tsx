@@ -49,12 +49,13 @@ function WorkspacePage() {
     JSON.parse(data.project.parameters || '{}'),
   )
 
-  // Sync when loader data changes
+  // Sync only when navigating to a different project (not on every router.invalidate())
+  // Local state is authoritative during editing; auto-save + invalidate should not overwrite unsaved edits
   useEffect(() => {
     setGeneralPrompt(data.project.generalPrompt ?? '')
     setNegativePrompt(data.project.negativePrompt ?? '')
     setParams(JSON.parse(data.project.parameters || '{}'))
-  }, [data.project])
+  }, [data.project.id])
 
   // ── Stable placeholder key arrays (only change when actual keys change, not on every keystroke) ──
   const rawGeneralKeys = useMemo(

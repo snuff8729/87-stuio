@@ -95,14 +95,31 @@ export async function generateImage(
   log.info('api.request', 'Sending NAI API request', body)
 
   const fetchStart = Date.now()
-  const response = await fetch(NAI_API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(body),
-  })
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 120_000) // 2 min timeout
+
+  let response: Response
+  try {
+    response = await fetch(NAI_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    })
+  } catch (err) {
+    clearTimeout(timeout)
+    const duration = Date.now() - fetchStart
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      log.error('api.timeout', 'NAI API request timed out', { durationMs: duration })
+      throw new Error(`NAI API request timed out after ${Math.round(duration / 1000)}s`)
+    }
+    log.error('api.fetchError', 'NAI API fetch failed', { durationMs: duration }, err)
+    throw err
+  }
+  clearTimeout(timeout)
   const fetchDuration = Date.now() - fetchStart
 
   if (!response.ok) {

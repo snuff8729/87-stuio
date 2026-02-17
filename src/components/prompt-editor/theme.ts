@@ -47,6 +47,8 @@ export const darkTheme = EditorView.theme(
       backgroundColor: 'oklch(0.20 0.008 70)',
       border: '1px solid oklch(1 0.03 70 / 8%)',
       borderRadius: '0.5rem',
+      maxHeight: '180px',
+      overflowY: 'auto',
     },
     '.cm-tooltip-autocomplete ul li': {
       padding: '4px 8px',

@@ -548,12 +548,12 @@ function CreateProjectDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{t('inspect.createProjectFromMetadata')}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="space-y-4 py-2 overflow-y-auto max-h-[60vh]">
           <div className="space-y-2">
             <Label htmlFor="proj-name">{t('inspect.projectName')}</Label>
             <Input
@@ -644,16 +644,16 @@ function FieldCheckbox({
   preview?: string
 }) {
   return (
-    <label className="flex items-start gap-2.5 cursor-pointer group">
+    <label className="flex items-start gap-2.5 cursor-pointer group overflow-hidden">
       <Checkbox
         checked={checked}
         onCheckedChange={onCheckedChange}
-        className="mt-0.5"
+        className="mt-0.5 shrink-0"
       />
       <div className="min-w-0 flex-1">
         <span className="text-sm font-medium">{label}</span>
         {preview && (
-          <p className="text-xs text-muted-foreground truncate mt-0.5 max-w-full">
+          <p className="text-xs text-muted-foreground truncate mt-0.5">
             {preview}
           </p>
         )}

@@ -1,12 +1,23 @@
 import { useEffect, useRef } from 'react'
 import { EditorState } from '@codemirror/state'
-import { EditorView, keymap } from '@codemirror/view'
+import { EditorView, keymap, ViewPlugin, type ViewUpdate } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { autocompletion } from '@codemirror/autocomplete'
 import { darkTheme } from './theme'
 import { placeholderHighlight } from './placeholder-highlight'
 import { weightHighlight } from './weight-highlight'
 import { danbooruCompletion, loadTagDatabase } from './danbooru-completion'
+
+// CM6 bug workaround: When lineWrapping is on and cursor is at a wrap boundary,
+// enforceCursorAssoc() modifies the DOM selection without checking hasFocus,
+// stealing focus back from the newly-focused editor.
+const fixLineWrapFocusSteal = ViewPlugin.fromClass(class {
+  update(update: ViewUpdate) {
+    if (update.focusChanged && !update.view.hasFocus) {
+      ;(update.view as any).viewState.mustEnforceCursorAssoc = false
+    }
+  }
+})
 
 interface PromptEditorProps {
   value: string
@@ -39,6 +50,7 @@ export function PromptEditor({
         keymap.of([...defaultKeymap, ...historyKeymap]),
         history(),
         EditorView.lineWrapping,
+        fixLineWrapFocusSteal,
         darkTheme,
         placeholderHighlight,
         weightHighlight,
@@ -79,10 +91,11 @@ export function PromptEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Sync external value changes
+  // Sync external value changes (skip if editor is focused to avoid cursor jumps)
   useEffect(() => {
     const view = viewRef.current
     if (!view) return
+    if (view.hasFocus) return
     const current = view.state.doc.toString()
     if (current !== value) {
       view.dispatch({
