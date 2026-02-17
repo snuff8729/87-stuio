@@ -107,12 +107,12 @@ export function GenerationProgress({ jobs, batchTotal, batchTiming, queueStopped
   const withClose = (fn: () => void) => () => { setOpen(false); fn() }
 
   return (
-    <div className="flex items-center gap-1 sm:gap-1.5 max-w-[200px] sm:max-w-[280px] w-full">
+    <div className="flex items-center gap-1 sm:gap-1.5 min-w-0">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="flex-1 min-w-0 flex items-center gap-1.5 sm:gap-2 h-8 px-1.5 sm:px-2 rounded-md hover:bg-secondary/50 transition-colors cursor-pointer"
+            className="min-w-0 max-w-[200px] sm:max-w-[260px] flex items-center gap-1.5 sm:gap-2 h-8 px-1.5 sm:px-2 rounded-md hover:bg-secondary/50 transition-colors cursor-pointer"
           >
             {/* Progress bar */}
             <div className="flex-1 min-w-8 sm:min-w-12 h-1.5 rounded-full bg-secondary overflow-hidden">
@@ -290,7 +290,7 @@ export function GenerationProgress({ jobs, batchTotal, batchTiming, queueStopped
       </Popover>
 
       {/* External action buttons — hidden on mobile, visible on sm+ */}
-      <div className="hidden sm:flex items-center gap-1">
+      <div className="hidden sm:flex items-center gap-1 shrink-0">
         {!isStopped ? (
           <>
             <Button

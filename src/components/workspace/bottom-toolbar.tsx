@@ -45,7 +45,7 @@ export const BottomToolbar = memo(function BottomToolbar({
       </div>
 
       {/* Row 1 right / Desktop center — generation progress */}
-      <div className="flex items-center justify-end lg:justify-center min-w-0">
+      <div className="flex items-center justify-end lg:justify-center min-w-0 overflow-hidden">
         {generationProgress}
       </div>
 

@@ -65,6 +65,9 @@ function serveDataFiles(): Plugin {
 }
 
 const config = defineConfig({
+  server: {
+    host: '0.0.0.0',
+  },
   plugins: [
     serveDataFiles(),
     devtools(),
