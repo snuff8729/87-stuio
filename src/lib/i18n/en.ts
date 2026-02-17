@@ -367,6 +367,7 @@ const en = {
     failedToSaveOverride: 'Failed to save override',
     filledCount: '{{filled}}/{{total}} filled',
     unfilledCount: '{{unfilled}}/{{total}} unfilled',
+    defaultValue: 'Default',
   },
   history: {
     title: 'History',

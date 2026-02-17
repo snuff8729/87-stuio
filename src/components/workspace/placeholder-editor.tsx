@@ -596,7 +596,7 @@ export const PlaceholderEditor = memo(function PlaceholderEditor({
 
                     {!isCollapsed && (
                       <div className="px-4 pb-3 space-y-2.5">
-                        {keys.map(({ key, isTemplate, generalValue }) => (
+                        {keys.map(({ key, isTemplate }) => (
                           <div key={key} id={`slot-c-${charId}-${key}`}>
                             <label className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground mb-1.5">
                               <StatusDot filled={true} template={isTemplate} />
@@ -604,15 +604,15 @@ export const PlaceholderEditor = memo(function PlaceholderEditor({
                                 {`\\\\${key}\\\\`}
                               </span>
                               {isTemplate && (
-                                <span className="text-[10px] text-amber-500/80 bg-amber-500/10 rounded px-1 py-0.5">{t('workspace.general')}</span>
+                                <span className="text-[10px] text-amber-500/80 bg-amber-500/10 rounded px-1 py-0.5">{t('placeholder.defaultValue')}</span>
                               )}
                             </label>
                             <textarea
-                              value={getCellValue(key, charId)}
+                              value={getEffectiveCharValue(key, charId)}
                               onChange={(e) => handleCellChange(charId, key, e.target.value)}
                               rows={4}
                               className="w-full rounded-lg border border-border bg-input/30 px-3 py-2 text-base font-mono placeholder:text-muted-foreground/40 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 focus:outline-none resize-y min-h-[5rem] transition-all"
-                              placeholder={generalValue ? `\u2190 ${t('workspace.general')}: ${generalValue}` : `${charName}: ${key}`}
+                              placeholder={`${charName}: ${key}`}
                             />
                           </div>
                         ))}

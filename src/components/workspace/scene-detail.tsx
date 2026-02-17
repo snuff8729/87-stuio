@@ -417,14 +417,21 @@ export function SceneDetail({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {charSpecificPlaceholders.map((key) => {
                     const generalVal = placeholderValues[key]
+                    const ownVal = charOverrides[char.id]?.[key] ?? ''
+                    const isInherited = !ownVal && !!generalVal
                     return (
                       <div key={key} className="space-y-1">
-                        <label className="text-sm font-mono text-muted-foreground">{`\\\\${key}\\\\`}</label>
+                        <label className="text-sm font-mono text-muted-foreground flex items-center gap-1.5">
+                          {`\\\\${key}\\\\`}
+                          {isInherited && (
+                            <span className="text-[10px] text-amber-500/80 bg-amber-500/10 rounded px-1 py-0.5 font-sans">{t('placeholder.defaultValue')}</span>
+                          )}
+                        </label>
                         <Input
-                          value={charOverrides[char.id]?.[key] ?? ''}
+                          value={ownVal || generalVal || ''}
                           onChange={(e) => handleCharOverrideChange(char.id, key, e.target.value)}
                           className="h-8 text-base"
-                          placeholder={generalVal ? `\u2190 ${generalVal}` : t('scene.valueFor', { key })}
+                          placeholder={t('scene.valueFor', { key })}
                         />
                       </div>
                     )
@@ -575,7 +582,21 @@ export function SceneDetail({
                             />
                             {imageContent}
                             {/* Overlay buttons */}
-                            <div className="absolute inset-x-0 top-0 flex items-center justify-between p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                            {/* Favorite button - always visible when favorited */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleToggleFavorite(img.id, img.isFavorite)
+                              }}
+                              className={`absolute top-1 right-1 p-0.5 z-10 transition-opacity ${img.isFavorite ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                              aria-label={img.isFavorite ? t('gallery.unfavorite') : t('gallery.favorite')}
+                            >
+                              <span className={`text-base ${img.isFavorite ? 'text-destructive' : 'text-white/70'}`}>
+                                {img.isFavorite ? '\u2764' : '\u2661'}
+                              </span>
+                            </button>
+                            {/* Overlay buttons */}
+                            <div className="absolute inset-x-0 top-0 flex items-center p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                               <div className="flex items-center gap-0.5">
                                 <button
                                   onClick={(e) => {
@@ -606,17 +627,6 @@ export function SceneDetail({
                                   )
                                 })()}
                               </div>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleToggleFavorite(img.id, img.isFavorite)
-                                }}
-                                aria-label={img.isFavorite ? t('gallery.unfavorite') : t('gallery.favorite')}
-                              >
-                                <span className={`text-base ${img.isFavorite ? 'text-destructive' : 'text-white/70'}`}>
-                                  {img.isFavorite ? '\u2764' : '\u2661'}
-                                </span>
-                              </button>
                             </div>
                             {(isThumbnail || projectThumbnailImageId === img.id) && (
                               <div className="absolute bottom-0 inset-x-0 bg-primary/80 text-primary-foreground text-[10px] text-center py-0.5">

@@ -370,6 +370,7 @@ const ko: DeepStringify<typeof en> = {
     failedToSaveOverride: '오버라이드 저장에 실패했습니다',
     filledCount: '{{filled}}/{{total}} 입력됨',
     unfilledCount: '{{unfilled}}/{{total}} 미입력',
+    defaultValue: '기본값',
   },
   history: {
     title: '히스토리',

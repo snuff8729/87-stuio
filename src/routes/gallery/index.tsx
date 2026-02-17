@@ -591,7 +591,7 @@ function GalleryImage({
           e.stopPropagation()
           onToggleFavorite()
         }}
-        className="absolute top-1.5 right-1.5 p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+        className={`absolute top-1.5 right-1.5 p-1 z-10 transition-opacity ${img.isFavorite ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
         aria-label={img.isFavorite ? 'Unfavorite' : 'Favorite'}
       >
         <span className={img.isFavorite ? 'text-destructive' : 'text-white/70'}>
