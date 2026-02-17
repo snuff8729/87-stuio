@@ -113,12 +113,11 @@ export function SceneDetail({
 
       if (silent) {
         setImages((prev) => {
+          const updatedMap = new Map(result.images.map((img) => [img.id, img]))
           const existingIds = new Set(prev.map((img) => img.id))
           const newImages = result.images.filter((img) => !existingIds.has(img.id))
-          if (newImages.length === 0) return prev
-          const updatedMap = new Map(result.images.map((img) => [img.id, img]))
           const updated = prev.map((img) => updatedMap.get(img.id) ?? img)
-          return [...newImages, ...updated]
+          return newImages.length > 0 ? [...newImages, ...updated] : updated
         })
       } else {
         setImages(result.images)
@@ -302,8 +301,8 @@ export function SceneDetail({
 
   function handleTournamentClose() {
     setTournamentOpen(false)
-    // Reload to reflect updated W/L stats
-    loadScene(false)
+    // Silent reload to reflect updated W/L stats without unmounting the grid
+    loadScene(true)
   }
 
   // ── Render ──
