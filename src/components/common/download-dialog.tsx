@@ -128,7 +128,7 @@ export function DownloadDialog({
       })
 
       if (!result.downloadId) {
-        toast.error(t('download.noImages'))
+        toast.error(t('export.noImages'))
         return
       }
 
@@ -145,10 +145,10 @@ export function DownloadDialog({
         setSetting({ data: { key: 'filename_template', value: template } })
       }
 
-      toast.success(t('download.success', { count: result.imageCount }))
+      toast.success(t('export.success', { count: result.imageCount }))
       setOpen(false)
     } catch {
-      toast.error(t('download.failed'))
+      toast.error(t('export.failed'))
     } finally {
       setPreparing(false)
     }
@@ -190,14 +190,14 @@ export function DownloadDialog({
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{t('download.downloadImages')}</DialogTitle>
+          <DialogTitle>{t('export.exportImages')}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
           {/* Filters (only when not downloading selected images) */}
           {!isSelectedMode && (
             <section className="space-y-3">
-              <Label className="text-sm font-medium">{t('download.filters')}</Label>
+              <Label className="text-sm font-medium">{t('export.filters')}</Label>
 
               {/* Favorites */}
               <div className="flex items-center gap-2">
@@ -207,14 +207,14 @@ export function DownloadDialog({
                   onCheckedChange={(v) => setFavoritesOnly(v === true)}
                 />
                 <Label htmlFor="dl-favorites" className="text-sm cursor-pointer">
-                  {t('download.favoritesOnly')}
+                  {t('export.favoritesOnly')}
                 </Label>
               </div>
 
               {/* Min Rating */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm">{t('download.minRating')}</Label>
+                  <Label className="text-sm">{t('export.minRating')}</Label>
                   <span className="text-xs text-muted-foreground tabular-nums">
                     {minRating > 0 ? `${minRating}+` : '-'}
                   </span>
@@ -231,7 +231,7 @@ export function DownloadDialog({
               {/* Min Win Rate */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm">{t('download.minWinRate')}</Label>
+                  <Label className="text-sm">{t('export.minWinRate')}</Label>
                   <span className="text-xs text-muted-foreground tabular-nums">
                     {minWinRate > 0 ? `${minWinRate}%` : '-'}
                   </span>
@@ -270,7 +270,7 @@ export function DownloadDialog({
 
           {/* Filename Template */}
           <section className="space-y-2">
-            <Label className="text-sm font-medium">{t('download.filenameTemplate')}</Label>
+            <Label className="text-sm font-medium">{t('export.filenameTemplate')}</Label>
             <Input
               value={template}
               onChange={(e) => setTemplate(e.target.value)}
@@ -278,10 +278,10 @@ export function DownloadDialog({
               className="text-sm font-mono"
             />
             <p className="text-xs text-muted-foreground">
-              {t('download.templateHelp')}
+              {t('export.templateHelp')}
             </p>
             <div className="text-xs text-muted-foreground">
-              <span className="font-medium">{t('download.templatePreview')}:</span>{' '}
+              <span className="font-medium">{t('export.templatePreview')}:</span>{' '}
               <code className="bg-secondary/60 px-1.5 py-0.5 rounded text-foreground">{preview}</code>
             </div>
           </section>
@@ -293,7 +293,7 @@ export function DownloadDialog({
             disabled={preparing || (!isSelectedMode && selectedSceneIds.size === 0 && availableScenes && availableScenes.length > 0)}
           >
             <HugeiconsIcon icon={Download04Icon} className="size-4" />
-            {preparing ? t('download.preparing') : t('download.download')}
+            {preparing ? t('export.preparing') : t('export.export')}
           </Button>
         </div>
       </DialogContent>
@@ -356,7 +356,7 @@ function SceneChecklist({
             onClick={onToggleAll}
             className="text-xs text-primary hover:underline"
           >
-            {allSelected ? t('download.deselectAll') : t('download.selectAll')}
+            {allSelected ? t('export.deselectAll') : t('export.selectAll')}
           </button>
         </div>
       </div>
@@ -366,7 +366,7 @@ function SceneChecklist({
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder={t('download.searchScenes')}
+          placeholder={t('export.searchScenes')}
           className="h-8 text-sm"
         />
       )}
@@ -375,7 +375,7 @@ function SceneChecklist({
       <div className="max-h-48 overflow-y-auto rounded-md border border-border">
         {filteredPacks.length === 0 ? (
           <div className="px-3 py-4 text-center text-sm text-muted-foreground">
-            {t('download.noMatchingScenes')}
+            {t('export.noMatchingScenes')}
           </div>
         ) : (
           filteredPacks.map(({ packName, scenes }) => {

@@ -15,6 +15,55 @@ import { useStableArray } from '@/lib/utils'
 import { SceneDetail } from '@/components/workspace/scene-detail'
 import { PromptPanel } from '@/components/workspace/prompt-panel'
 import { ScenePlaceholderPanel } from '@/components/workspace/scene-placeholder-panel'
+import { Skeleton } from '@/components/ui/skeleton'
+
+function PendingComponent() {
+  return (
+    <div className="h-dvh flex flex-col overflow-hidden">
+      {/* Header */}
+      <header className="h-12 border-b border-border bg-background flex items-center px-3 shrink-0 gap-2">
+        <Skeleton className="h-7 w-7 rounded-md" />
+        <Skeleton className="h-4 w-24" />
+        <div className="h-4 w-px bg-border" />
+        <div className="min-w-0 flex-1 space-y-1">
+          <Skeleton className="h-3 w-16" />
+          <Skeleton className="h-4 w-28" />
+        </div>
+      </header>
+
+      {/* Content */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left — Prompts */}
+        <aside className="hidden lg:block w-[280px] shrink-0 border-r border-border p-3 space-y-3">
+          <Skeleton className="h-4 w-24 mb-2" />
+          <Skeleton className="h-24 w-full rounded-md" />
+          <Skeleton className="h-4 w-20 mt-4 mb-2" />
+          <Skeleton className="h-16 w-full rounded-md" />
+        </aside>
+
+        {/* Center — Placeholders */}
+        <div className="hidden md:block w-[320px] shrink-0 border-r border-border p-3 space-y-3">
+          <Skeleton className="h-5 w-28 mb-3" />
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="space-y-1.5">
+              <Skeleton className="h-3.5 w-20" />
+              <Skeleton className="h-8 w-full rounded-md" />
+            </div>
+          ))}
+        </div>
+
+        {/* Right — Image grid */}
+        <main className="flex-1 min-w-0 p-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+            {Array.from({ length: 9 }).map((_, i) => (
+              <Skeleton key={i} className="w-full aspect-square rounded-lg" />
+            ))}
+          </div>
+        </main>
+      </div>
+    </div>
+  )
+}
 
 export const Route = createFileRoute('/workspace/$projectId/scenes/$sceneId')({
   loader: async ({ params }) => {
@@ -26,6 +75,7 @@ export const Route = createFileRoute('/workspace/$projectId/scenes/$sceneId')({
     return { ...context, activeJobs: jobsResult.jobs, batchTiming: jobsResult.batchTiming, queueStatus: jobsResult.queueStatus }
   },
   component: SceneDetailPage,
+  pendingComponent: PendingComponent,
 })
 
 function SceneDetailPage() {

@@ -21,10 +21,41 @@ import {
   listScenesForFilter,
   bulkUpdateImages,
 } from '@/server/functions/gallery'
+import { Skeleton } from '@/components/ui/skeleton'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Image02Icon, Download04Icon } from '@hugeicons/core-free-icons'
 import { useTranslation } from '@/lib/i18n'
 import { DownloadDialog } from '@/components/common/download-dialog'
+
+function PendingComponent() {
+  return (
+    <div>
+      {/* PageHeader */}
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <div className="space-y-1.5">
+          <Skeleton className="h-6 w-20" />
+          <Skeleton className="h-4 w-32" />
+        </div>
+        <Skeleton className="h-8 w-20 rounded-md" />
+      </div>
+
+      {/* Filter bar */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <Skeleton className="h-9 w-40 rounded-md" />
+        <Skeleton className="h-8 w-20 rounded-md" />
+        <Skeleton className="h-9 w-32 rounded-md" />
+        <Skeleton className="h-9 w-36 rounded-md" />
+      </div>
+
+      {/* Image grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-1.5">
+        {Array.from({ length: 15 }).map((_, i) => (
+          <Skeleton key={i} className="w-full aspect-square rounded-lg" />
+        ))}
+      </div>
+    </div>
+  )
+}
 
 type SearchParams = {
   project?: number
@@ -65,6 +96,7 @@ export const Route = createFileRoute('/gallery/')({
     return { initialImages: images, allTags, allProjects }
   },
   component: GalleryPage,
+  pendingComponent: PendingComponent,
 })
 
 const GAP = 6 // gap-1.5 = 6px
@@ -243,7 +275,7 @@ function GalleryPage() {
               trigger={
                 <Button size="sm" variant="outline">
                   <HugeiconsIcon icon={Download04Icon} className="size-4" />
-                  {t('download.download')}
+                  {t('export.export')}
                 </Button>
               }
               projectId={search.project}
@@ -471,7 +503,7 @@ function GalleryPage() {
             trigger={
               <Button size="sm" variant="outline">
                 <HugeiconsIcon icon={Download04Icon} className="size-4" />
-                {t('download.download')}
+                {t('export.export')}
               </Button>
             }
             selectedImageIds={[...selectedIds]}

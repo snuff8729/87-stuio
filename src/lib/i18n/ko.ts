@@ -24,7 +24,7 @@ const ko: DeepStringify<typeof en> = {
   nav: {
     projects: '프로젝트',
     gallery: '갤러리',
-    inspect: '검사',
+    metadata: '메타데이터',
     settings: '설정',
   },
   error: {
@@ -156,8 +156,8 @@ const ko: DeepStringify<typeof en> = {
     characterNegative: '캐릭터 {{n}} 네거티브',
     references: '참조 이미지',
   },
-  inspect: {
-    title: '검사',
+  metadata: {
+    title: '메타데이터',
     description: '이미지에서 NovelAI 생성 메타데이터를 추출하고 확인합니다',
     dropToReplace: '이미지를 교체하려면 드롭하세요',
     dropToInspect: '검사할 이미지를 드롭하세요',
@@ -399,12 +399,12 @@ const ko: DeepStringify<typeof en> = {
     wide: '와이드',
     tall: '톨',
   },
-  download: {
-    download: '다운로드',
-    downloadImages: '이미지 다운로드',
+  export: {
+    export: '내보내기',
+    exportImages: '이미지 내보내기',
     preparing: 'ZIP 준비 중...',
-    success: '{{count}}개 이미지 다운로드 완료',
-    failed: '다운로드에 실패했습니다',
+    success: '{{count}}개 이미지 내보내기 완료',
+    failed: '내보내기에 실패했습니다',
     noImages: '현재 필터에 해당하는 이미지가 없습니다.',
     filenameTemplate: '파일명 템플릿',
     templateHelp: '사용 가능: {{project_name}}, {{scene_name}}, {{seed}}, {{index}}, {{date}}, {{rating}}, {{id}}, {{wins}}, {{win_rate}}',
@@ -415,9 +415,9 @@ const ko: DeepStringify<typeof en> = {
     allScenes: '모든 씬',
     selectedScenes: '{{count}}개 씬 선택됨',
     filters: '필터',
-    downloadAll: '전체 다운로드',
-    downloadSelected: '선택 다운로드',
-    downloadSettings: '다운로드 설정',
+    exportAll: '전체 내보내기',
+    exportSelected: '선택 내보내기',
+    exportSettings: '내보내기 설정',
     selectAll: '모두 선택',
     deselectAll: '모두 해제',
     searchScenes: '씬 검색...',

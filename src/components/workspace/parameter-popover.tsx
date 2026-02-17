@@ -239,9 +239,9 @@ function ParameterForm({
 
       {/* Download Settings */}
       <section className="space-y-2">
-        <Label className="text-sm font-medium">{t('download.downloadSettings')}</Label>
+        <Label className="text-sm font-medium">{t('export.exportSettings')}</Label>
         <div className="space-y-1.5">
-          <Label className="text-xs text-muted-foreground">{t('download.filenameTemplate')}</Label>
+          <Label className="text-xs text-muted-foreground">{t('export.filenameTemplate')}</Label>
           <Input
             value={String(localParams.filenameTemplate ?? DEFAULT_FILENAME_TEMPLATE)}
             onChange={(e) => set('filenameTemplate', e.target.value)}
@@ -249,7 +249,7 @@ function ParameterForm({
             className="h-8 text-sm font-mono"
           />
           <p className="text-xs text-muted-foreground leading-relaxed">
-            {t('download.templateHelp')}
+            {t('export.templateHelp')}
           </p>
         </div>
       </section>

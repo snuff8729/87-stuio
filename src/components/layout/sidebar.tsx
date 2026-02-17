@@ -13,7 +13,7 @@ import type { TranslationKeys } from '@/lib/i18n'
 const navItems = [
   { to: '/', key: 'nav.projects' as TranslationKeys, icon: Home03Icon },
   { to: '/gallery', key: 'nav.gallery' as TranslationKeys, icon: Image02Icon },
-  { to: '/inspect', key: 'nav.inspect' as TranslationKeys, icon: FileSearchIcon },
+  { to: '/metadata', key: 'nav.metadata' as TranslationKeys, icon: FileSearchIcon },
   { to: '/settings', key: 'nav.settings' as TranslationKeys, icon: Settings02Icon },
 ] as const
 

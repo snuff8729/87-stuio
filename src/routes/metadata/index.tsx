@@ -22,7 +22,7 @@ import type { NAIMetadata } from '@/lib/nai-metadata'
 import { createProjectFromMetadata } from '@/server/functions/inspect'
 import { useTranslation } from '@/lib/i18n'
 
-export const Route = createFileRoute('/inspect/')({
+export const Route = createFileRoute('/metadata/')({
   component: InspectPage,
 })
 
@@ -39,7 +39,7 @@ function InspectPage() {
 
   const handleFile = useCallback(async (file: File) => {
     if (!file.type.startsWith('image/')) {
-      toast.error(t('inspect.selectImage'))
+      toast.error(t('metadata.selectImage'))
       return
     }
 
@@ -56,10 +56,10 @@ function InspectPage() {
       const result = await parseMetadataFromFile(file)
       setMetadata(result)
       if (!result) {
-        toast.error(t('inspect.noMetadata'))
+        toast.error(t('metadata.noMetadata'))
       }
     } catch {
-      toast.error(t('inspect.failedToParse'))
+      toast.error(t('metadata.failedToParse'))
     } finally {
       setParsing(false)
     }
@@ -122,15 +122,15 @@ function InspectPage() {
               <HugeiconsIcon icon={Upload01Icon} className="size-7 text-primary" />
             </div>
             <p className="text-base font-medium">
-              {imageUrl ? t('inspect.dropToReplace') : t('inspect.dropToInspect')}
+              {imageUrl ? t('metadata.dropToReplace') : t('metadata.dropToInspect')}
             </p>
           </div>
         </div>
       )}
 
       <PageHeader
-        title={t('inspect.title')}
-        description={t('inspect.description')}
+        title={t('metadata.title')}
+        description={t('metadata.description')}
       />
 
       <div className="max-w-5xl">
@@ -163,10 +163,10 @@ function InspectPage() {
             </div>
             <div className="text-center">
               <p className="text-base font-medium">
-                {t('inspect.dropOrClick')}
+                {t('metadata.dropOrClick')}
               </p>
               <p className="text-sm text-muted-foreground mt-1">
-                {t('inspect.supportsNai')}
+                {t('metadata.supportsNai')}
               </p>
             </div>
           </div>
@@ -194,7 +194,7 @@ function InspectPage() {
                     onClick={() => setShowCreateDialog(true)}
                   >
                     <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 mr-1.5" />
-                    {t('inspect.createProject')}
+                    {t('metadata.createProject')}
                   </Button>
                 )}
                 <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>
@@ -224,7 +224,7 @@ function InspectPage() {
                 {parsing && (
                   <div className="flex items-center gap-3 p-6">
                     <div className="size-5 border-2 border-muted-foreground/30 border-t-primary rounded-full animate-spin" />
-                    <span className="text-sm text-muted-foreground">{t('inspect.parsingMetadata')}</span>
+                    <span className="text-sm text-muted-foreground">{t('metadata.parsingMetadata')}</span>
                   </div>
                 )}
 
@@ -232,7 +232,7 @@ function InspectPage() {
                   <Card>
                     <CardContent className="py-8 text-center">
                       <p className="text-sm text-muted-foreground">
-                        {t('inspect.noMetadataFound')}
+                        {t('metadata.noMetadataFound')}
                       </p>
                     </CardContent>
                   </Card>
@@ -467,7 +467,7 @@ function CreateProjectDialog({
 
   async function handleCreate() {
     if (!projectName.trim()) {
-      toast.error(t('inspect.pleaseEnterName'))
+      toast.error(t('metadata.pleaseEnterName'))
       return
     }
 
@@ -533,14 +533,14 @@ function CreateProjectDialog({
         },
       })
 
-      toast.success(t('inspect.projectCreated'))
+      toast.success(t('metadata.projectCreated'))
       onOpenChange(false)
       navigate({
         to: '/workspace/$projectId',
         params: { projectId: String(project.id) },
       })
     } catch {
-      toast.error(t('inspect.failedToCreate'))
+      toast.error(t('metadata.failedToCreate'))
     } finally {
       setCreating(false)
     }
@@ -550,29 +550,29 @@ function CreateProjectDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t('inspect.createProjectFromMetadata')}</DialogTitle>
+          <DialogTitle>{t('metadata.createProjectFromMetadata')}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2 overflow-y-auto max-h-[60vh]">
           <div className="space-y-2">
-            <Label htmlFor="proj-name">{t('inspect.projectName')}</Label>
+            <Label htmlFor="proj-name">{t('metadata.projectName')}</Label>
             <Input
               id="proj-name"
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
-              placeholder={t('inspect.enterProjectName')}
+              placeholder={t('metadata.enterProjectName')}
             />
           </div>
 
           <Separator />
 
           <div className="space-y-1">
-            <Label className="text-sm text-muted-foreground">{t('inspect.importFields')}</Label>
+            <Label className="text-sm text-muted-foreground">{t('metadata.importFields')}</Label>
             <div className="space-y-2.5 pt-1">
               <FieldCheckbox
                 checked={fields.generalPrompt}
                 onCheckedChange={() => toggleField('generalPrompt')}
-                label={t('inspect.generalPrompt')}
+                label={t('metadata.generalPrompt')}
                 preview={
                   metadata.v4_prompt?.caption?.base_caption
                     || metadata.prompt
@@ -582,14 +582,14 @@ function CreateProjectDialog({
               <FieldCheckbox
                 checked={fields.negativePrompt}
                 onCheckedChange={() => toggleField('negativePrompt')}
-                label={t('inspect.negativePrompt')}
+                label={t('metadata.negativePrompt')}
                 preview={metadata.negativePrompt}
               />
               {hasV4Chars && (
                 <FieldCheckbox
                   checked={fields.characters}
                   onCheckedChange={() => toggleField('characters')}
-                  label={t('inspect.characterPrompts', { count: metadata.v4_prompt!.caption!.char_captions!.length })}
+                  label={t('metadata.characterPrompts', { count: metadata.v4_prompt!.caption!.char_captions!.length })}
                   preview={metadata.v4_prompt!.caption!.char_captions!.map(
                     (c) => c.char_caption,
                   ).join(' | ')}
@@ -598,7 +598,7 @@ function CreateProjectDialog({
               <FieldCheckbox
                 checked={fields.parameters}
                 onCheckedChange={() => toggleField('parameters')}
-                label={t('inspect.generationParameters')}
+                label={t('metadata.generationParameters')}
                 preview={[
                   metadata.steps && `Steps: ${metadata.steps}`,
                   metadata.cfgScale && `CFG: ${metadata.cfgScale}`,
@@ -608,7 +608,7 @@ function CreateProjectDialog({
               <FieldCheckbox
                 checked={fields.resolution}
                 onCheckedChange={() => toggleField('resolution')}
-                label={t('inspect.resolution')}
+                label={t('metadata.resolution')}
                 preview={
                   metadata.width && metadata.height
                     ? `${metadata.width} x ${metadata.height}`
@@ -624,7 +624,7 @@ function CreateProjectDialog({
             {t('common.cancel')}
           </Button>
           <Button onClick={handleCreate} disabled={creating}>
-            {creating ? t('inspect.creating') : t('inspect.createProjectBtn')}
+            {creating ? t('metadata.creating') : t('metadata.createProjectBtn')}
           </Button>
         </DialogFooter>
       </DialogContent>

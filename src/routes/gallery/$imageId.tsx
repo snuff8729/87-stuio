@@ -18,7 +18,61 @@ import { updateProjectScene } from '@/server/functions/project-scenes'
 import { updateProject } from '@/server/functions/projects'
 import { parseNAIMetadata, getUcPresetLabel } from '@/lib/nai-metadata'
 import type { NAIMetadata } from '@/lib/nai-metadata'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useTranslation } from '@/lib/i18n'
+
+function PendingComponent() {
+  return (
+    <div className="h-dvh flex flex-col lg:flex-row bg-background">
+      {/* Image area */}
+      <div className="flex-1 flex items-center justify-center bg-black/40 min-h-0">
+        <Skeleton className="w-3/4 aspect-[3/4] max-h-[80%] rounded-lg bg-white/5" />
+      </div>
+
+      {/* Detail panel */}
+      <div className="h-[40vh] lg:h-auto lg:w-80 bg-card border-t lg:border-t-0 lg:border-l border-border p-4 shrink-0 space-y-4">
+        <div className="flex items-center justify-between mb-5">
+          <Skeleton className="h-5 w-16" />
+          <Skeleton className="size-5 rounded" />
+        </div>
+
+        {/* Context */}
+        <div className="space-y-1.5">
+          <Skeleton className="h-3 w-12" />
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-4 w-20" />
+        </div>
+        <Skeleton className="h-px w-full" />
+
+        {/* Favorite */}
+        <Skeleton className="h-8 w-full rounded-md" />
+
+        {/* Rating */}
+        <div className="space-y-1.5">
+          <Skeleton className="h-3 w-10" />
+          <div className="flex gap-1">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="size-5 rounded" />
+            ))}
+          </div>
+        </div>
+        <Skeleton className="h-px w-full" />
+
+        {/* Memo */}
+        <div className="space-y-1.5">
+          <Skeleton className="h-3 w-8" />
+          <Skeleton className="h-20 w-full rounded-md" />
+        </div>
+
+        {/* Tags */}
+        <div className="space-y-1.5">
+          <Skeleton className="h-3 w-8" />
+          <Skeleton className="h-7 w-full rounded-md" />
+        </div>
+      </div>
+    </div>
+  )
+}
 
 type SearchParams = {
   project?: number
@@ -50,6 +104,7 @@ export const Route = createFileRoute('/gallery/$imageId')({
     })
   },
   component: ImageDetailPage,
+  pendingComponent: PendingComponent,
 })
 
 function ImageDetailPage() {

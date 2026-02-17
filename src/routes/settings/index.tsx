@@ -6,11 +6,41 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Slider } from '@/components/ui/slider'
 import { getSetting, setSetting } from '@/server/functions/settings'
 import { getStorageStats, cleanupOrphanFiles } from '@/server/functions/storage'
 import { useTranslation } from '@/lib/i18n'
 import type { Locale } from '@/lib/i18n'
+
+function PendingComponent() {
+  return (
+    <div>
+      {/* PageHeader */}
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <div className="space-y-1.5">
+          <Skeleton className="h-6 w-16" />
+          <Skeleton className="h-4 w-44" />
+        </div>
+      </div>
+
+      <div className="max-w-2xl space-y-6">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="rounded-xl border border-border">
+            <div className="p-6 pb-3">
+              <Skeleton className="h-5 w-32" />
+            </div>
+            <div className="px-6 pb-6 space-y-3">
+              <Skeleton className="h-3.5 w-48" />
+              <Skeleton className="h-9 w-full rounded-md" />
+            </div>
+          </div>
+        ))}
+        <Skeleton className="h-9 w-32 rounded-md" />
+      </div>
+    </div>
+  )
+}
 
 export const Route = createFileRoute('/settings/')({
   loader: async () => {
@@ -21,6 +51,7 @@ export const Route = createFileRoute('/settings/')({
     return { apiKey: apiKey ?? '', delay: delay ?? '500' }
   },
   component: SettingsPage,
+  pendingComponent: PendingComponent,
 })
 
 function formatBytes(bytes: number): string {

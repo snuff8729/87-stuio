@@ -27,6 +27,66 @@ import { DownloadDialog } from '@/components/common/download-dialog'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Download04Icon } from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+
+function PendingComponent() {
+  return (
+    <div className="h-dvh flex flex-col overflow-hidden">
+      {/* Header */}
+      <div className="h-12 border-b border-border bg-background flex items-center px-3 shrink-0 gap-3">
+        <Skeleton className="size-7 rounded-md" />
+        <Skeleton className="h-4 w-28" />
+        <div className="flex-1" />
+        <Skeleton className="h-4 w-16" />
+      </div>
+
+      {/* 3-panel body */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left panel */}
+        <aside className="hidden lg:block w-[280px] shrink-0 border-r border-border p-3 space-y-3">
+          <Skeleton className="h-4 w-24 mb-2" />
+          <Skeleton className="h-24 w-full rounded-md" />
+          <Skeleton className="h-4 w-20 mt-4 mb-2" />
+          <Skeleton className="h-16 w-full rounded-md" />
+        </aside>
+
+        {/* Center panel */}
+        <main className="flex-1 min-w-0 p-3 space-y-3">
+          <div className="flex items-center justify-between mb-2">
+            <Skeleton className="h-5 w-20" />
+            <Skeleton className="h-7 w-24 rounded-md" />
+          </div>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 px-2 py-2">
+              <Skeleton className="size-10 rounded-lg shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-3 w-40" />
+              </div>
+              <Skeleton className="h-7 w-14 rounded-md" />
+            </div>
+          ))}
+        </main>
+
+        {/* Right panel */}
+        <aside className="hidden lg:block w-[220px] shrink-0 border-l border-border p-3 space-y-2">
+          <Skeleton className="h-4 w-16 mb-2" />
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="w-full aspect-square rounded-lg" />
+          ))}
+        </aside>
+      </div>
+
+      {/* Bottom toolbar */}
+      <div className="h-12 border-t border-border bg-background flex items-center px-3 gap-3 shrink-0">
+        <Skeleton className="h-7 w-20 rounded-md" />
+        <Skeleton className="h-7 w-24 rounded-md" />
+        <div className="flex-1" />
+        <Skeleton className="h-8 w-24 rounded-md" />
+      </div>
+    </div>
+  )
+}
 
 export const Route = createFileRoute('/workspace/$projectId/')({
   loader: async ({ params }) => {
@@ -34,6 +94,7 @@ export const Route = createFileRoute('/workspace/$projectId/')({
     return getWorkspaceData({ data: projectId })
   },
   component: WorkspacePage,
+  pendingComponent: PendingComponent,
 })
 
 function WorkspacePage() {
@@ -502,7 +563,7 @@ function WorkspacePage() {
               trigger={
                 <Button variant="ghost" size="sm">
                   <HugeiconsIcon icon={Download04Icon} className="size-5" />
-                  <span className="hidden sm:inline">{t('download.download')}</span>
+                  <span className="hidden sm:inline">{t('export.export')}</span>
                 </Button>
               }
               projectId={projectId}

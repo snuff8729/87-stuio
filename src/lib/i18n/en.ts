@@ -21,7 +21,7 @@ const en = {
   nav: {
     projects: 'Projects',
     gallery: 'Gallery',
-    inspect: 'Inspect',
+    metadata: 'Metadata',
     settings: 'Settings',
   },
   error: {
@@ -153,8 +153,8 @@ const en = {
     characterNegative: 'Character {{n}} Negative',
     references: 'References',
   },
-  inspect: {
-    title: 'Inspect',
+  metadata: {
+    title: 'Metadata',
     description: 'Extract and view NovelAI generation metadata from images',
     dropToReplace: 'Drop to replace image',
     dropToInspect: 'Drop image to inspect',
@@ -396,12 +396,12 @@ const en = {
     wide: 'Wide',
     tall: 'Tall',
   },
-  download: {
-    download: 'Download',
-    downloadImages: 'Download Images',
+  export: {
+    export: 'Export',
+    exportImages: 'Export Images',
     preparing: 'Preparing ZIP...',
-    success: '{{count}} images downloaded',
-    failed: 'Download failed',
+    success: '{{count}} images exported',
+    failed: 'Export failed',
     noImages: 'No images match the current filters.',
     filenameTemplate: 'Filename Template',
     templateHelp: 'Available: {{project_name}}, {{scene_name}}, {{seed}}, {{index}}, {{date}}, {{rating}}, {{id}}, {{wins}}, {{win_rate}}',
@@ -412,9 +412,9 @@ const en = {
     allScenes: 'All scenes',
     selectedScenes: '{{count}} scenes selected',
     filters: 'Filters',
-    downloadAll: 'Download All',
-    downloadSelected: 'Download Selected',
-    downloadSettings: 'Download Settings',
+    exportAll: 'Export All',
+    exportSelected: 'Export Selected',
+    exportSettings: 'Export Settings',
     selectAll: 'Select all',
     deselectAll: 'Deselect all',
     searchScenes: 'Search scenes...',

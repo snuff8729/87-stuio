@@ -17,6 +17,7 @@ import {
 import { listProjects, createProject, deleteProject } from '@/server/functions/projects'
 import { listJobs } from '@/server/functions/generation'
 import { getSetting } from '@/server/functions/settings'
+import { Skeleton } from '@/components/ui/skeleton'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   FolderOpenIcon,
@@ -26,6 +27,39 @@ import {
   Settings02Icon,
 } from '@hugeicons/core-free-icons'
 import { useTranslation } from '@/lib/i18n'
+
+function PendingComponent() {
+  return (
+    <div className="max-w-2xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <Skeleton className="size-8 rounded-lg" />
+          <Skeleton className="h-5 w-16" />
+        </div>
+        <Skeleton className="h-8 w-20" />
+      </div>
+
+      {/* Project list */}
+      <div className="space-y-1">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3 px-3 py-3">
+            <Skeleton className="size-10 rounded-lg shrink-0" />
+            <div className="flex-1 min-w-0 space-y-1.5">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3.5 w-48" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Create button */}
+      <div className="mt-4">
+        <Skeleton className="h-9 w-full rounded-md" />
+      </div>
+    </div>
+  )
+}
 
 export const Route = createFileRoute('/')({
   loader: async () => {
@@ -43,6 +77,7 @@ export const Route = createFileRoute('/')({
     }
   },
   component: ProjectSelectorPage,
+  pendingComponent: PendingComponent,
 })
 
 function ProjectSelectorPage() {
