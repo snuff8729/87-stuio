@@ -107,7 +107,7 @@ function RootComponent() {
       <I18nProvider>
         <TooltipProvider delayDuration={300}>
           <Outlet />
-          <Toaster richColors position="bottom-right" />
+          <Toaster richColors position="top-center" />
         </TooltipProvider>
       </I18nProvider>
     )

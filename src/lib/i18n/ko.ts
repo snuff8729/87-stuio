@@ -50,6 +50,7 @@ const ko: DeepStringify<typeof en> = {
     projectName: '프로젝트 이름',
     descriptionOptional: '설명 (선택)',
     briefDescription: '간단한 설명...',
+    morePendingJobs: '외 {{count}}개 대기 중',
   },
   settings: {
     title: '설정',

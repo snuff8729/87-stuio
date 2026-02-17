@@ -142,39 +142,53 @@ function ProjectSelectorPage() {
       </div>
 
       {/* Active jobs notice */}
-      {liveJobs.length > 0 && (
-        <div className="mb-4 space-y-1.5">
-          {liveJobs.map((j) => (
-            <Link
-              key={j.id}
-              to="/workspace/$projectId"
-              params={{ projectId: String(j.projectId) }}
-              className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 transition-colors hover:bg-primary/8"
-            >
-              <div className="size-2 rounded-full bg-primary animate-pulse shrink-0" />
-              <span className="text-base font-medium truncate">
-                {j.projectName && j.projectSceneName
-                  ? `${j.projectName} / ${j.projectSceneName}`
-                  : `Job #${j.id}`}
-              </span>
-              <Badge variant="secondary" className="text-sm shrink-0">{j.status}</Badge>
-              <div className="flex-1 min-w-16">
-                <div className="h-1 rounded-full bg-secondary overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all duration-500"
-                    style={{
-                      width: `${((j.completedCount ?? 0) / (j.totalCount ?? 1)) * 100}%`,
-                    }}
-                  />
+      {liveJobs.length > 0 && (() => {
+        const runningJobs = liveJobs.filter((j) => j.status === 'running')
+        const pendingJobs = liveJobs.filter((j) => j.status === 'pending')
+        const MAX_PENDING = 3
+        const visiblePending = pendingJobs.slice(0, MAX_PENDING)
+        const hiddenPendingCount = pendingJobs.length - visiblePending.length
+        const visibleJobs = [...runningJobs, ...visiblePending]
+
+        return (
+          <div className="mb-4 space-y-1.5">
+            {visibleJobs.map((j) => (
+              <Link
+                key={j.id}
+                to="/workspace/$projectId"
+                params={{ projectId: String(j.projectId) }}
+                className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 transition-colors hover:bg-primary/8"
+              >
+                <div className={`size-2 rounded-full shrink-0 ${j.status === 'running' ? 'bg-primary animate-pulse' : 'bg-muted-foreground/40'}`} />
+                <span className="text-base font-medium truncate">
+                  {j.projectName && j.projectSceneName
+                    ? `${j.projectName} / ${j.projectSceneName}`
+                    : `Job #${j.id}`}
+                </span>
+                <Badge variant="secondary" className="text-sm shrink-0">{j.status}</Badge>
+                <div className="flex-1 min-w-16">
+                  <div className="h-1 rounded-full bg-secondary overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all duration-500"
+                      style={{
+                        width: `${((j.completedCount ?? 0) / (j.totalCount ?? 1)) * 100}%`,
+                      }}
+                    />
+                  </div>
                 </div>
+                <span className="text-sm text-muted-foreground tabular-nums shrink-0">
+                  {j.completedCount}/{j.totalCount}
+                </span>
+              </Link>
+            ))}
+            {hiddenPendingCount > 0 && (
+              <div className="text-sm text-muted-foreground text-center py-1">
+                {t('dashboard.morePendingJobs', { count: hiddenPendingCount })}
               </div>
-              <span className="text-sm text-muted-foreground tabular-nums shrink-0">
-                {j.completedCount}/{j.totalCount}
-              </span>
-            </Link>
-          ))}
-        </div>
-      )}
+            )}
+          </div>
+        )
+      })()}
 
       {/* Project list */}
       <div className="space-y-1">

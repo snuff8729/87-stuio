@@ -2,7 +2,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { db } from '../db'
 import { generatedImages } from '../db/schema'
 import { createLogger } from '../services/logger'
-import { getAllStoredFiles, getFileSize, deleteImageFiles } from '../services/image'
+import { getAllStoredFiles, getFileSize } from '../services/image'
 import { unlinkSync, existsSync, readdirSync, rmSync } from 'node:fs'
 import { dirname } from 'node:path'
 

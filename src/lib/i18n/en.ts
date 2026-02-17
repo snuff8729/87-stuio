@@ -47,6 +47,7 @@ const en = {
     projectName: 'Project name',
     descriptionOptional: 'Description (optional)',
     briefDescription: 'Brief description...',
+    morePendingJobs: '+{{count}} more pending',
   },
   settings: {
     title: 'Settings',

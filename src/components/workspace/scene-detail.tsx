@@ -3,17 +3,20 @@ import { Link } from '@tanstack/react-router'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { toast } from 'sonner'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Image02Icon, FolderOpenIcon } from '@hugeicons/core-free-icons'
+import { Image02Icon, FolderOpenIcon, Download04Icon } from '@hugeicons/core-free-icons'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { getSceneDetail, getSceneImages } from '@/server/functions/workspace'
 import { updateProjectScene, upsertCharacterOverride } from '@/server/functions/project-scenes'
-import { updateImage } from '@/server/functions/gallery'
+import { updateImage, bulkUpdateImages } from '@/server/functions/gallery'
 import { extractPlaceholders } from '@/lib/placeholder'
 import { useTranslation } from '@/lib/i18n'
+import { ConfirmDialog } from '@/components/common/confirm-dialog'
+import { DownloadDialog } from '@/components/common/download-dialog'
 import { TournamentDialog } from './tournament-dialog'
 
 interface SceneDetailProps {
@@ -100,6 +103,10 @@ export function SceneDetail({
   // Tournament
   const [tournamentOpen, setTournamentOpen] = useState(false)
   const [sortBy, setSortBy] = useState<SortBy>('newest')
+
+  // Bulk selection
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
 
   // Placeholder values (general)
   const [placeholderValues, setPlaceholderValues] = useState<Record<string, string>>({})
@@ -294,8 +301,14 @@ export function SceneDetail({
     )
   }
 
+  function exitSelectMode() {
+    setSelectMode(false)
+    setSelectedIds(new Set())
+  }
+
   function handleSortChange(value: SortBy) {
     setSortBy(value)
+    exitSelectMode()
     // Reload images with new sort (non-silent to reset the list)
     setImages([])
     loadScene(false, value)
@@ -305,6 +318,46 @@ export function SceneDetail({
     setTournamentOpen(false)
     // Silent reload to reflect updated W/L stats without unmounting the grid
     loadScene(true)
+  }
+
+  // Reset selection when scene changes
+  useEffect(() => {
+    exitSelectMode()
+  }, [sceneId])
+
+  function toggleSelect(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  async function handleBulkFavorite() {
+    try {
+      await bulkUpdateImages({ data: { imageIds: [...selectedIds], isFavorite: 1 } })
+      setImages((prev) =>
+        prev.map((img) => (selectedIds.has(img.id) ? { ...img, isFavorite: 1 } : img)),
+      )
+      toast.success(t('gallery.bulkFavoriteSuccess', { count: selectedIds.size }))
+      exitSelectMode()
+    } catch {
+      toast.error(t('gallery.bulkFailed'))
+    }
+  }
+
+  async function handleBulkDelete() {
+    try {
+      const count = selectedIds.size
+      await bulkUpdateImages({ data: { imageIds: [...selectedIds], delete: true } })
+      setImages((prev) => prev.filter((img) => !selectedIds.has(img.id)))
+      setTotalImageCount((prev) => prev - count)
+      toast.success(t('gallery.bulkDeleteSuccess', { count }))
+      exitSelectMode()
+    } catch {
+      toast.error(t('gallery.bulkDeleteFailed'))
+    }
   }
 
   // ── Render ──
@@ -395,6 +448,16 @@ export function SceneDetail({
                   {t('tournament.tournament')}
                 </Button>
               )}
+              <Button
+                size="xs"
+                variant={selectMode ? 'default' : 'outline'}
+                onClick={() => {
+                  setSelectMode(!selectMode)
+                  if (selectMode) setSelectedIds(new Set())
+                }}
+              >
+                {selectMode ? t('gallery.deselect') : t('gallery.select')}
+              </Button>
               <Select value={sortBy} onValueChange={(v) => handleSortChange(v as SortBy)}>
                 <SelectTrigger size="sm" className="h-7 text-xs">
                   <SelectValue />
@@ -442,6 +505,61 @@ export function SceneDetail({
                     <div style={{ display: 'flex', gap: `${GAP}px` }}>
                       {rowImages.map((img) => {
                         const isThumbnail = thumbnailImageId === img.id
+                        const isSelected = selectedIds.has(img.id)
+
+                        // Image thumbnail content (shared between modes)
+                        const imageContent = img.thumbnailPath ? (
+                          <img
+                            src={`/api/thumbnails/${img.thumbnailPath.replace('data/thumbnails/', '')}`}
+                            alt=""
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
+                            {t('scene.noThumb')}
+                          </div>
+                        )
+
+                        if (selectMode) {
+                          return (
+                            <div
+                              key={img.id}
+                              style={{ width: `${cellSize}px`, height: `${cellSize}px` }}
+                              className="relative group rounded-lg overflow-hidden bg-secondary shrink-0 cursor-pointer"
+                              onClick={() => toggleSelect(img.id)}
+                            >
+                              {imageContent}
+                              <div className="absolute top-1.5 left-1.5 z-10">
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={() => toggleSelect(img.id)}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </div>
+                              {isSelected && (
+                                <div className="absolute inset-0 bg-primary/20 ring-2 ring-primary ring-inset rounded-lg" />
+                              )}
+                              {/* Thumbnail bar (keep in select mode) */}
+                              {(isThumbnail || projectThumbnailImageId === img.id) && (
+                                <div className="absolute bottom-0 inset-x-0 bg-primary/80 text-primary-foreground text-[10px] text-center py-0.5">
+                                  {isThumbnail && projectThumbnailImageId === img.id
+                                    ? t('scene.scenePlusProjectThumb')
+                                    : isThumbnail
+                                      ? t('scene.sceneThumb')
+                                      : t('scene.projectThumb')}
+                                </div>
+                              )}
+                              {/* Tournament W/L badge (keep in select mode) */}
+                              {((img.tournamentWins ?? 0) > 0 || (img.tournamentLosses ?? 0) > 0) && (
+                                <div className="absolute bottom-0.5 left-0.5 bg-black/70 text-white text-[9px] px-1 rounded z-10 pointer-events-none">
+                                  {img.tournamentWins ?? 0}W-{img.tournamentLosses ?? 0}L
+                                </div>
+                              )}
+                            </div>
+                          )
+                        }
+
                         return (
                           <div
                             key={img.id}
@@ -454,18 +572,7 @@ export function SceneDetail({
                               search={{ project: projectId, projectSceneId: sceneId }}
                               className="absolute inset-0 z-0"
                             />
-                            {img.thumbnailPath ? (
-                              <img
-                                src={`/api/thumbnails/${img.thumbnailPath.replace('data/thumbnails/', '')}`}
-                                alt=""
-                                className="w-full h-full object-cover"
-                                loading="lazy"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
-                                {t('scene.noThumb')}
-                              </div>
-                            )}
+                            {imageContent}
                             {/* Overlay buttons */}
                             <div className="absolute inset-x-0 top-0 flex items-center justify-between p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                               <div className="flex items-center gap-0.5">
@@ -556,6 +663,31 @@ export function SceneDetail({
       {!loading && images.length === 0 && (
         <div className="text-center py-8 text-base text-muted-foreground">
           {t('scene.noImagesYet')}
+        </div>
+      )}
+
+      {/* Bulk action bar */}
+      {selectMode && selectedIds.size > 0 && (
+        <div className="fixed bottom-16 lg:bottom-4 left-1/2 -translate-x-1/2 z-40 bg-card border border-border rounded-xl px-4 py-2 flex items-center gap-3 shadow-lg">
+          <span className="text-base font-medium">{t('gallery.selectedCount', { count: selectedIds.size })}</span>
+          <DownloadDialog
+            trigger={
+              <Button size="sm" variant="outline">
+                <HugeiconsIcon icon={Download04Icon} className="size-4" />
+                {t('download.download')}
+              </Button>
+            }
+            selectedImageIds={[...selectedIds]}
+          />
+          <Button size="sm" variant="outline" onClick={handleBulkFavorite}>{t('gallery.addToFavorites')}</Button>
+          <ConfirmDialog
+            trigger={<Button size="sm" variant="destructive">{t('common.delete')}</Button>}
+            title={t('gallery.deleteImages')}
+            description={t('gallery.deleteImagesDesc', { count: selectedIds.size })}
+            variant="destructive"
+            onConfirm={handleBulkDelete}
+          />
+          <Button size="sm" variant="ghost" onClick={exitSelectMode}>{t('common.cancel')}</Button>
         </div>
       )}
 
