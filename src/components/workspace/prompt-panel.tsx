@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useRef, useEffect } from 'react'
+import { lazy, Suspense, useState, useRef, useEffect, useMemo } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -176,8 +176,8 @@ export function PromptPanel({
   const displayPrompt = activeContext === 'general' ? generalPrompt : charPrompt
   const displayNegative = activeContext === 'general' ? negativePrompt : charNegative
 
-  const promptPlaceholders = extractPlaceholders(displayPrompt)
-  const negativePlaceholders = extractPlaceholders(displayNegative)
+  const promptPlaceholders = useMemo(() => extractPlaceholders(displayPrompt), [displayPrompt])
+  const negativePlaceholders = useMemo(() => extractPlaceholders(displayNegative), [displayNegative])
 
   function handlePromptChange(value: string) {
     if (activeContext === 'general') {

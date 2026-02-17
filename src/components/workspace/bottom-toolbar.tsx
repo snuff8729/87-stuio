@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   PlayIcon,
@@ -25,7 +26,7 @@ interface BottomToolbarProps {
   onToggleRight: () => void
 }
 
-export function BottomToolbar({
+export const BottomToolbar = memo(function BottomToolbar({
   countPerScene,
   onCountChange,
   onGenerate,
@@ -82,4 +83,4 @@ export function BottomToolbar({
       </div>
     </div>
   )
-}
+})

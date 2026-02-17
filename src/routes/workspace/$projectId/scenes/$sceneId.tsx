@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { toast } from 'sonner'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowLeft02Icon, Menu01Icon } from '@hugeicons/core-free-icons'
@@ -9,6 +9,8 @@ import { getScenePageContext, listProjectJobs } from '@/server/functions/workspa
 import { cancelJobs } from '@/server/functions/generation'
 import { updateProjectScene } from '@/server/functions/project-scenes'
 import { updateProject } from '@/server/functions/projects'
+import { extractPlaceholders } from '@/lib/placeholder'
+import { useStableArray } from '@/lib/utils'
 import { SceneDetail } from '@/components/workspace/scene-detail'
 import { PromptPanel } from '@/components/workspace/prompt-panel'
 import { ScenePlaceholderPanel } from '@/components/workspace/scene-placeholder-panel'
@@ -40,6 +42,27 @@ function SceneDetailPage() {
     setGeneralPrompt(data.project.generalPrompt ?? '')
     setNegativePrompt(data.project.negativePrompt ?? '')
   }, [data.project])
+
+  // ── Stable placeholder key arrays ──
+  const rawGeneralKeys = useMemo(
+    () => [...new Set([...extractPlaceholders(generalPrompt), ...extractPlaceholders(negativePrompt)])],
+    [generalPrompt, negativePrompt],
+  )
+  const stableGeneralKeys = useStableArray(rawGeneralKeys)
+
+  const characterPlaceholderKeys = useMemo(
+    () => data.characters.map((char) => ({
+      characterId: char.id,
+      characterName: char.name,
+      keys: [...new Set([...extractPlaceholders(char.charPrompt), ...extractPlaceholders(char.charNegative)])],
+    })),
+    [data.characters],
+  )
+
+  // ── Stable getPrompts callback for PlaceholderEditor preview (ref-based, no re-renders) ──
+  const promptsRef = useRef({ generalPrompt, negativePrompt })
+  promptsRef.current = { generalPrompt, negativePrompt }
+  const getPrompts = useCallback(() => promptsRef.current, [])
 
   // ── Scene placeholder state ──
   const [scenePlaceholders, setScenePlaceholders] = useState<Record<string, string>>(
@@ -241,10 +264,11 @@ function SceneDetailPage() {
             sceneId={sceneId}
             scenePlaceholders={scenePlaceholders}
             characterOverrides={charOverrides}
-            generalPrompt={generalPrompt}
-            negativePrompt={negativePrompt}
+            generalPlaceholderKeys={stableGeneralKeys}
+            characterPlaceholderKeys={characterPlaceholderKeys}
             characters={data.characters}
             onPlaceholdersChange={handlePlaceholdersChange}
+            getPrompts={getPrompts}
           />
         </div>
 
@@ -253,7 +277,7 @@ function SceneDetailPage() {
           <SceneDetail
             sceneId={sceneId}
             characters={data.characters}
-            generalPrompt={generalPrompt}
+            generalPlaceholderKeys={stableGeneralKeys}
             projectId={projectId}
             thumbnailImageId={data.thumbnailImageId}
             onThumbnailChange={handleThumbnailChange}

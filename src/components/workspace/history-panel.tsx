@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Link } from '@tanstack/react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowRight01Icon } from '@hugeicons/core-free-icons'
@@ -14,7 +15,7 @@ interface HistoryPanelProps {
   projectId: number
 }
 
-export function HistoryPanel({ images, projectId }: HistoryPanelProps) {
+export const HistoryPanel = memo(function HistoryPanel({ images, projectId }: HistoryPanelProps) {
   return (
     <div className="p-2 flex flex-col h-full">
       <div className="flex items-center justify-between mb-2">
@@ -74,4 +75,4 @@ export function HistoryPanel({ images, projectId }: HistoryPanelProps) {
       </div>
     </div>
   )
-}
+})

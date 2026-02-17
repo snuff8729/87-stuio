@@ -1,9 +1,10 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, memo } from 'react'
 import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Add01Icon,
+  ArrowRight01Icon,
   Delete02Icon,
   Image02Icon,
   GridIcon,
@@ -21,6 +22,12 @@ interface CharacterOverride {
   placeholders: string
 }
 
+interface CharacterPlaceholderKeyEntry {
+  characterId: number
+  characterName: string
+  keys: string[]
+}
+
 interface ScenePanelProps {
   scenePacks: Array<{
     id: number
@@ -36,8 +43,8 @@ interface ScenePanelProps {
     }>
   }>
   projectId: number
-  generalPrompt: string
-  negativePrompt: string
+  generalPlaceholderKeys: string[]
+  characterPlaceholderKeys: CharacterPlaceholderKeyEntry[]
   characters: Array<{
     id: number
     name: string
@@ -54,13 +61,14 @@ interface ScenePanelProps {
   onPlaceholdersChange: () => void
   viewMode: 'reserve' | 'edit'
   onViewModeChange: (mode: 'reserve' | 'edit') => void
+  getPrompts?: () => { generalPrompt: string; negativePrompt: string }
 }
 
-export function ScenePanel({
+export const ScenePanel = memo(function ScenePanel({
   scenePacks,
   projectId,
-  generalPrompt,
-  negativePrompt,
+  generalPlaceholderKeys,
+  characterPlaceholderKeys,
   characters,
   characterOverrides,
   sceneCounts,
@@ -72,6 +80,7 @@ export function ScenePanel({
   onPlaceholdersChange,
   viewMode,
   onViewModeChange,
+  getPrompts,
 }: ScenePanelProps) {
   const allScenes = scenePacks.flatMap((pack) => pack.scenes)
 
@@ -183,20 +192,21 @@ export function ScenePanel({
           <SceneMatrix
             scenePacks={scenePacks}
             projectId={projectId}
-            generalPrompt={generalPrompt}
-            negativePrompt={negativePrompt}
+            generalPlaceholderKeys={generalPlaceholderKeys}
+            characterPlaceholderKeys={characterPlaceholderKeys}
             characters={characters}
             characterOverrides={characterOverrides}
             onAddScene={onAddScene}
             onDeleteScene={onDeleteScene}
             onRenameScene={onRenameScene}
             onPlaceholdersChange={onPlaceholdersChange}
+            getPrompts={getPrompts}
           />
         )}
       </div>
     </div>
   )
-}
+})
 
 // ── Reserve Grid ──
 
@@ -278,41 +288,26 @@ function ReserveGrid({
                   </span>
                 )}
 
-                {/* Delete button (hover) */}
-                <div className="absolute top-1.5 left-1.5 opacity-0 group-hover/card:opacity-100 transition-opacity">
-                  <ConfirmDialog
-                    trigger={
-                      <button className="rounded-full bg-black/50 backdrop-blur-sm text-white/70 hover:text-white hover:bg-destructive/80 transition-all p-1">
-                        <HugeiconsIcon icon={Delete02Icon} className="size-4" />
-                      </button>
-                    }
-                    title="Delete Scene"
-                    description={`Delete "${scene.name}" and all associated images data?`}
-                    onConfirm={() => onDeleteScene(scene.id)}
-                  />
-                </div>
-
-                {/* Gallery link */}
-                <Link
-                  to="/workspace/$projectId/scenes/$sceneId"
-                  params={{
-                    projectId: String(projectId),
-                    sceneId: String(scene.id),
-                  }}
-                  className="absolute bottom-1.5 right-1.5 opacity-0 group-hover/card:opacity-100 transition-opacity text-xs text-white/80 hover:text-white bg-black/50 backdrop-blur-sm rounded-full px-2 py-0.5"
-                >
-                  Gallery &rarr;
-                </Link>
               </div>
 
               {/* Info + count */}
-              <div className="px-2.5 pt-1.5 pb-2">
-                <div className="text-sm font-medium truncate text-foreground/90">
-                  {scene.name}
+              <div className="px-2.5 pt-2 pb-2.5">
+                <div className="flex items-center gap-1">
+                  <div className="text-sm font-medium truncate flex-1 text-foreground/90">
+                    {scene.name}
+                  </div>
+                  <Link
+                    to="/workspace/$projectId/scenes/$sceneId"
+                    params={{ projectId: String(projectId), sceneId: String(scene.id) }}
+                    className="shrink-0 rounded-md p-1 text-muted-foreground hover:text-primary hover:bg-secondary/80 transition-colors"
+                    title="View gallery"
+                  >
+                    <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" />
+                  </Link>
                 </div>
 
-                {/* Count stepper */}
-                <div className="flex items-center gap-1 mt-1.5">
+                {/* Count stepper + delete */}
+                <div className="flex items-center gap-1 mt-2">
                   <NumberStepper
                     value={count}
                     onChange={(v) => onSceneCountChange(scene.id, v)}
@@ -329,6 +324,17 @@ function ReserveGrid({
                       &times;
                     </button>
                   )}
+                  <div className="flex-1" />
+                  <ConfirmDialog
+                    trigger={
+                      <button className="rounded-md p-1 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-all">
+                        <HugeiconsIcon icon={Delete02Icon} className="size-3.5" />
+                      </button>
+                    }
+                    title="Delete Scene"
+                    description={`Delete "${scene.name}" and all associated images data?`}
+                    onConfirm={() => onDeleteScene(scene.id)}
+                  />
                 </div>
               </div>
             </div>

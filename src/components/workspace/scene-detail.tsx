@@ -23,7 +23,7 @@ interface SceneDetailProps {
     charPrompt: string
     charNegative: string
   }>
-  generalPrompt: string
+  generalPlaceholderKeys: string[]
   projectId: number
   thumbnailImageId: number | null
   onThumbnailChange: (imageId: number | null, thumbnailPath?: string | null) => void
@@ -76,7 +76,7 @@ function findScrollParent(el: HTMLElement | null): HTMLElement | null {
 export function SceneDetail({
   sceneId,
   characters,
-  generalPrompt,
+  generalPlaceholderKeys,
   projectId,
   thumbnailImageId,
   onThumbnailChange,
@@ -237,7 +237,7 @@ export function SceneDetail({
   }, [lastVirtualRow?.index, rowCount, hasMore, handleLoadMore])
 
   // ── Placeholder / override editing ──
-  const generalPlaceholders = extractPlaceholders(generalPrompt)
+  const generalPlaceholders = generalPlaceholderKeys
   const charPlaceholders = characters.flatMap((c) => [
     ...extractPlaceholders(c.charPrompt),
     ...extractPlaceholders(c.charNegative),

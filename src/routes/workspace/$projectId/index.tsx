@@ -1,5 +1,7 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { extractPlaceholders } from '@/lib/placeholder'
+import { useStableArray } from '@/lib/utils'
 import { toast } from 'sonner'
 import { getWorkspaceData, listProjectJobs, getRecentImages, getSceneImageCounts } from '@/server/functions/workspace'
 import { updateProject } from '@/server/functions/projects'
@@ -47,6 +49,27 @@ function WorkspacePage() {
     setNegativePrompt(data.project.negativePrompt ?? '')
     setParams(JSON.parse(data.project.parameters || '{}'))
   }, [data.project])
+
+  // ── Stable placeholder key arrays (only change when actual keys change, not on every keystroke) ──
+  const rawGeneralKeys = useMemo(
+    () => [...new Set([...extractPlaceholders(generalPrompt), ...extractPlaceholders(negativePrompt)])],
+    [generalPrompt, negativePrompt],
+  )
+  const stableGeneralKeys = useStableArray(rawGeneralKeys)
+
+  // ── Stable getPrompts callback for PlaceholderEditor preview (ref-based, no re-renders) ──
+  const promptsRef = useRef({ generalPrompt, negativePrompt })
+  promptsRef.current = { generalPrompt, negativePrompt }
+  const getPrompts = useCallback(() => promptsRef.current, [])
+
+  const characterPlaceholderKeys = useMemo(
+    () => data.characters.map((char) => ({
+      characterId: char.id,
+      characterName: char.name,
+      keys: [...new Set([...extractPlaceholders(char.charPrompt), ...extractPlaceholders(char.charNegative)])],
+    })),
+    [data.characters],
+  )
 
   // ── Auto-save ──
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
@@ -131,7 +154,7 @@ function WorkspacePage() {
   }, [liveImages])
 
   // Merge optimistic thumbnail overrides + live counts into scene packs
-  const scenePacks = data.scenePacks.map((pack) => ({
+  const scenePacks = useMemo(() => data.scenePacks.map((pack) => ({
     ...pack,
     scenes: pack.scenes.map((scene) => {
       const override = thumbnailOverrides[scene.id]
@@ -147,7 +170,7 @@ function WorkspacePage() {
             : (liveLatestThumbs[scene.id] ?? scene.thumbnailPath),
       }
     }),
-  }))
+  })), [data.scenePacks, thumbnailOverrides, liveSceneCounts, liveLatestThumbs])
 
   // ── Character overrides (loaded for matrix view) ──
   const [characterOverrides, setCharacterOverrides] = useState<
@@ -182,26 +205,26 @@ function WorkspacePage() {
   }, [loadCharacterOverrides])
 
   // ── Scene management handlers ──
-  async function handleAddScene(name: string) {
+  const handleAddScene = useCallback(async (name: string) => {
     await addProjectScene({ data: { projectId, name } })
     router.invalidate()
-  }
+  }, [projectId, router])
 
-  async function handleDeleteScene(sceneId: number) {
+  const handleDeleteScene = useCallback(async (sceneId: number) => {
     await deleteProjectScene({ data: sceneId })
     router.invalidate()
-  }
+  }, [router])
 
-  async function handleRenameScene(id: number, name: string) {
+  const handleRenameScene = useCallback(async (id: number, name: string) => {
     await renameProjectScene({ data: { id, name } })
     router.invalidate()
-  }
+  }, [router])
 
-  function handlePlaceholdersChange() {
+  const handlePlaceholdersChange = useCallback(() => {
     // Reload workspace data to reflect saved placeholders
     router.invalidate()
     loadCharacterOverrides()
-  }
+  }, [router, loadCharacterOverrides])
 
   // ── Generation state ──
   const [countPerScene, setCountPerScene] = useState(0)
@@ -235,7 +258,7 @@ function WorkspacePage() {
     return sceneCounts[sceneId] ?? countPerScene
   }
 
-  function handleSceneCountChange(sceneId: number, count: number | null) {
+  const handleSceneCountChange = useCallback((sceneId: number, count: number | null) => {
     setSceneCounts((prev) => {
       if (count === null) {
         const { [sceneId]: _, ...rest } = prev
@@ -243,7 +266,7 @@ function WorkspacePage() {
       }
       return { ...prev, [sceneId]: count }
     })
-  }
+  }, [])
 
   // Poll during generation
   const prevCompletedRef = useRef(0)
@@ -386,8 +409,8 @@ function WorkspacePage() {
         <ScenePanel
           scenePacks={scenePacks}
           projectId={projectId}
-          generalPrompt={generalPrompt}
-          negativePrompt={negativePrompt}
+          generalPlaceholderKeys={stableGeneralKeys}
+          characterPlaceholderKeys={characterPlaceholderKeys}
           characters={data.characters}
           characterOverrides={characterOverrides}
           sceneCounts={sceneCounts}
@@ -399,6 +422,7 @@ function WorkspacePage() {
           onPlaceholdersChange={handlePlaceholdersChange}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
+          getPrompts={getPrompts}
         />
       }
       rightPanel={
