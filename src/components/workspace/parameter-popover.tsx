@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -57,6 +58,7 @@ const PARAM_HELP: Record<string, string> = {
   sampler: 'params.samplerHelp',
   scheduler: 'params.schedulerHelp',
   ucPreset: 'params.ucPresetHelp',
+  seed: 'params.seedHelp',
 }
 
 function ParamLabel({ name, label, value }: { name: string; label: string; value?: string | number }) {
@@ -266,6 +268,41 @@ function ParameterForm({
             </SelectContent>
           </Select>
         </div>
+      </section>
+
+      <hr className="border-border" />
+
+      {/* Seed */}
+      <section className="space-y-2">
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="seed-fixed"
+            checked={localParams.seed != null}
+            onCheckedChange={(checked) => {
+              if (checked) {
+                set('seed', 0)
+              } else {
+                set('seed', undefined)
+              }
+            }}
+          />
+          <ParamLabel name="seed" label={t('params.seedFixed')} />
+        </div>
+        {localParams.seed != null ? (
+          <Input
+            type="number"
+            min={0}
+            max={4294967295}
+            value={String(localParams.seed ?? 0)}
+            onChange={(e) => {
+              const v = Math.max(0, Math.min(4294967295, Math.floor(Number(e.target.value) || 0)))
+              set('seed', v)
+            }}
+            className="h-8 text-sm tabular-nums"
+          />
+        ) : (
+          <p className="text-xs text-muted-foreground">{t('params.seedRandom')}</p>
+        )}
       </section>
 
       <hr className="border-border" />
