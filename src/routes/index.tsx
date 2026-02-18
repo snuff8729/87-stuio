@@ -14,7 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { listProjects, createProject, deleteProject } from '@/server/functions/projects'
+import { listProjects, createProject, deleteProject, duplicateProject } from '@/server/functions/projects'
 import { listJobs } from '@/server/functions/generation'
 import { getSetting } from '@/server/functions/settings'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -25,6 +25,7 @@ import {
   ArrowRight01Icon,
   Delete02Icon,
   Settings02Icon,
+  Copy01Icon,
 } from '@hugeicons/core-free-icons'
 import { useTranslation } from '@/lib/i18n'
 
@@ -138,6 +139,16 @@ function ProjectSelectorPage() {
       router.navigate({ to: '/workspace/$projectId', params: { projectId: String(project.id) } })
     } catch {
       toast.error(t('dashboard.createFailed'))
+    }
+  }
+
+  async function handleDuplicate(id: number) {
+    try {
+      await duplicateProject({ data: id })
+      toast.success(t('dashboard.projectDuplicated'))
+      router.invalidate()
+    } catch {
+      toast.error(t('dashboard.duplicateFailed'))
     }
   }
 
@@ -260,6 +271,15 @@ function ProjectSelectorPage() {
               </div>
               <HugeiconsIcon icon={ArrowRight01Icon} className="size-5 text-muted-foreground/50 group-hover:text-primary transition-colors shrink-0" />
             </Link>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="opacity-0 group-hover:opacity-100 text-muted-foreground shrink-0"
+              onClick={() => handleDuplicate(p.id)}
+              title={t('dashboard.duplicateProject')}
+            >
+              <HugeiconsIcon icon={Copy01Icon} className="size-5" />
+            </Button>
             <ConfirmDialog
               trigger={
                 <Button

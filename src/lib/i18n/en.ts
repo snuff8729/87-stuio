@@ -48,6 +48,9 @@ const en = {
     descriptionOptional: 'Description (optional)',
     briefDescription: 'Brief description...',
     morePendingJobs: '+{{count}} more pending',
+    duplicateProject: 'Duplicate Project',
+    projectDuplicated: 'Project duplicated',
+    duplicateFailed: 'Failed to duplicate project',
   },
   settings: {
     title: 'Settings',

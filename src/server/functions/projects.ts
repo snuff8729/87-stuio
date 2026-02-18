@@ -1,6 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { db } from '../db'
-import { projects, projectScenePacks, projectScenes, scenes, scenePacks, generatedImages } from '../db/schema'
+import { projects, projectScenePacks, projectScenes, scenes, scenePacks, generatedImages, characters, characterSceneOverrides } from '../db/schema'
 import { eq, desc, inArray } from 'drizzle-orm'
 import { createLogger } from '../services/logger'
 import { deleteImageFiles } from '../services/image'
@@ -144,6 +144,119 @@ export const assignScenePack = createServerFn({ method: 'POST' })
     })
 
     return psp
+  })
+
+export const duplicateProject = createServerFn({ method: 'POST' })
+  .inputValidator((id: number) => id)
+  .handler(async ({ data: id }) => {
+    const source = db.select().from(projects).where(eq(projects.id, id)).get()
+    if (!source) throw new Error('Project not found')
+
+    // 1. Create new project
+    const newProject = db
+      .insert(projects)
+      .values({
+        name: `${source.name} (Copy)`,
+        description: source.description,
+        generalPrompt: source.generalPrompt,
+        negativePrompt: source.negativePrompt,
+        parameters: source.parameters,
+        thumbnailImageId: null,
+      })
+      .returning()
+      .get()
+
+    // 2. Copy characters (old id → new id mapping for overrides)
+    const sourceChars = db
+      .select()
+      .from(characters)
+      .where(eq(characters.projectId, id))
+      .all()
+
+    const charIdMap = new Map<number, number>()
+    for (const ch of sourceChars) {
+      const newChar = db
+        .insert(characters)
+        .values({
+          projectId: newProject.id,
+          slotIndex: ch.slotIndex,
+          name: ch.name,
+          charPrompt: ch.charPrompt,
+          charNegative: ch.charNegative,
+        })
+        .returning()
+        .get()
+      charIdMap.set(ch.id, newChar.id)
+    }
+
+    // 3. Copy project scene packs + scenes + character overrides
+    const sourcePacks = db
+      .select()
+      .from(projectScenePacks)
+      .where(eq(projectScenePacks.projectId, id))
+      .all()
+
+    for (const pack of sourcePacks) {
+      const newPack = db
+        .insert(projectScenePacks)
+        .values({
+          projectId: newProject.id,
+          scenePackId: pack.scenePackId,
+          name: pack.name,
+        })
+        .returning()
+        .get()
+
+      const sourceSceneRows = db
+        .select()
+        .from(projectScenes)
+        .where(eq(projectScenes.projectScenePackId, pack.id))
+        .all()
+
+      for (const scene of sourceSceneRows) {
+        const newScene = db
+          .insert(projectScenes)
+          .values({
+            projectScenePackId: newPack.id,
+            sourceSceneId: scene.sourceSceneId,
+            name: scene.name,
+            placeholders: scene.placeholders,
+            thumbnailImageId: null,
+            sortOrder: scene.sortOrder,
+          })
+          .returning()
+          .get()
+
+        // Copy character scene overrides
+        const overrides = db
+          .select()
+          .from(characterSceneOverrides)
+          .where(eq(characterSceneOverrides.projectSceneId, scene.id))
+          .all()
+
+        for (const ovr of overrides) {
+          const newCharId = charIdMap.get(ovr.characterId)
+          if (newCharId) {
+            db.insert(characterSceneOverrides)
+              .values({
+                projectSceneId: newScene.id,
+                characterId: newCharId,
+                placeholders: ovr.placeholders,
+              })
+              .run()
+          }
+        }
+      }
+    }
+
+    log.info('duplicate', 'Project duplicated', {
+      sourceId: id,
+      newProjectId: newProject.id,
+      characters: sourceChars.length,
+      scenePacks: sourcePacks.length,
+    })
+
+    return newProject
   })
 
 export const removeProjectScenePack = createServerFn({ method: 'POST' })

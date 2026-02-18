@@ -51,6 +51,9 @@ const ko: DeepStringify<typeof en> = {
     descriptionOptional: '설명 (선택)',
     briefDescription: '간단한 설명...',
     morePendingJobs: '외 {{count}}개 대기 중',
+    duplicateProject: '프로젝트 복제',
+    projectDuplicated: '프로젝트가 복제되었습니다',
+    duplicateFailed: '프로젝트 복제에 실패했습니다',
   },
   settings: {
     title: '설정',
