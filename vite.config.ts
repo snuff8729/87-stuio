@@ -74,7 +74,6 @@ const config = defineConfig({
     nitro({
       handlers: [
         {
-          route: '/api/**',
           middleware: true,
           handler: './src/server/api/data-files.ts',
         },
