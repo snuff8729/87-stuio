@@ -20,6 +20,11 @@ const ko: DeepStringify<typeof en> = {
     saving: '저장 중...',
     saveFailed: '저장 실패',
     replace: '교체',
+    gridSize: {
+      small: 'S',
+      medium: 'M',
+      large: 'L',
+    },
   },
   nav: {
     projects: '프로젝트',

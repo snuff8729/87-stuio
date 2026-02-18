@@ -26,6 +26,8 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { Image02Icon, Download04Icon } from '@hugeicons/core-free-icons'
 import { useTranslation } from '@/lib/i18n'
 import { DownloadDialog } from '@/components/common/download-dialog'
+import { GridSizeToggle } from '@/components/common/grid-size-toggle'
+import { useImageGridSize, type GridSize } from '@/lib/use-image-grid-size'
 
 function PendingComponent() {
   return (
@@ -101,20 +103,27 @@ export const Route = createFileRoute('/gallery/')({
 
 const GAP = 6 // gap-1.5 = 6px
 
-function useGalleryColumns() {
-  const [cols, setCols] = useState(2)
+const gallerySizeMap: Record<GridSize, [number, number, number, number]> = {
+  sm: [3, 4, 6, 8],
+  md: [2, 3, 4, 5],
+  lg: [1, 2, 3, 4],
+}
+
+function useGalleryColumns(gridSize: GridSize) {
+  const [cols, setCols] = useState(gallerySizeMap[gridSize][0])
   useEffect(() => {
+    const bp = gallerySizeMap[gridSize]
     function update() {
       const w = window.innerWidth
-      if (w >= 1024) setCols(5)
-      else if (w >= 768) setCols(4)
-      else if (w >= 640) setCols(3)
-      else setCols(2)
+      if (w >= 1024) setCols(bp[3])
+      else if (w >= 768) setCols(bp[2])
+      else if (w >= 640) setCols(bp[1])
+      else setCols(bp[0])
     }
     update()
     window.addEventListener('resize', update)
     return () => window.removeEventListener('resize', update)
-  }, [])
+  }, [gridSize])
   return cols
 }
 
@@ -136,8 +145,11 @@ function GalleryPage() {
   // Scene filter options (loaded when project is selected)
   const [projectScenes, setProjectScenes] = useState<{ id: number; name: string }[]>([])
 
+  // ── Grid size ──
+  const { gridSize, setGridSize } = useImageGridSize('gallery')
+
   // ── Virtualized grid setup ──
-  const cols = useGalleryColumns()
+  const cols = useGalleryColumns(gridSize)
   const gridRef = useRef<HTMLDivElement>(null)
   const [gridWidth, setGridWidth] = useState(0)
   const [scrollMargin, setScrollMargin] = useState(0)
@@ -427,6 +439,10 @@ function GalleryPage() {
             {t('common.clear')}
           </Button>
         )}
+
+        <div className="ml-auto">
+          <GridSizeToggle value={gridSize} onChange={setGridSize} />
+        </div>
       </div>
 
       {/* Image Grid — Virtualized */}

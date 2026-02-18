@@ -28,7 +28,7 @@ function useIsMobile() {
 }
 
 // --- Model presets ---
-export const AVAILABLE_MODELS = [
+const AVAILABLE_MODELS = [
   { id: 'nai-diffusion-4-5-curated', name: 'NAI Diffusion V4.5 Curated' },
   { id: 'nai-diffusion-4-5-full', name: 'NAI Diffusion V4.5 Full' },
   { id: 'nai-diffusion-4-curated-preview', name: 'NAI Diffusion V4 Curated' },
@@ -37,7 +37,7 @@ export const AVAILABLE_MODELS = [
   { id: 'nai-diffusion-furry-3', name: 'NAI Diffusion Furry V3' },
 ] as const
 
-export const DEFAULT_MODEL = 'nai-diffusion-4-5-full'
+const DEFAULT_MODEL = 'nai-diffusion-4-5-full'
 
 // --- Resolution presets ---
 const RESOLUTION_PRESETS = [

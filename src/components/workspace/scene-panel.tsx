@@ -34,6 +34,8 @@ import { ConvertToTemplateDialog } from './convert-to-template-dialog'
 import { SceneMatrix } from './scene-matrix'
 import { useTranslation } from '@/lib/i18n'
 import { bulkDeleteProjectScenes } from '@/server/functions/project-scenes'
+import { GridSizeToggle } from '@/components/common/grid-size-toggle'
+import { useImageGridSize, type GridSize } from '@/lib/use-image-grid-size'
 
 export type SceneSortBy = 'default' | 'name_asc' | 'name_desc' | 'images_desc' | 'images_asc' | 'created_asc' | 'created_desc'
 
@@ -122,6 +124,7 @@ export const ScenePanel = memo(function ScenePanel({
   const { t } = useTranslation()
   const [searchVisible, setSearchVisible] = useState(searchQuery.length > 0)
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const { gridSize, setGridSize } = useImageGridSize('scene-list')
 
   // ── Selection mode ──
   const [selectMode, setSelectMode] = useState(false)
@@ -297,6 +300,11 @@ export const ScenePanel = memo(function ScenePanel({
 
             <div className="flex-1" />
 
+            {/* Grid size toggle (reserve view only) */}
+            {viewMode === 'reserve' && (
+              <GridSizeToggle value={gridSize} onChange={setGridSize} />
+            )}
+
             {/* Sort dropdown */}
             <Select value={sortBy} onValueChange={onSortByChange}>
               <SelectTrigger size="sm" className="h-7 w-auto gap-1.5 text-xs text-muted-foreground border-none bg-transparent hover:bg-secondary/80 px-2">
@@ -407,6 +415,7 @@ export const ScenePanel = memo(function ScenePanel({
             selectMode={selectMode}
             selectedSceneIds={selectedSceneIds}
             onToggleSelect={toggleSelectScene}
+            gridSize={gridSize}
           />
         ) : (
           <SceneMatrix
@@ -495,6 +504,13 @@ interface ReserveGridProps {
   selectMode: boolean
   selectedSceneIds: Set<number>
   onToggleSelect: (id: number) => void
+  gridSize: GridSize
+}
+
+const reserveGridSizeMap: Record<GridSize, string> = {
+  sm: 'grid-cols-3 md:grid-cols-4',
+  md: 'grid-cols-2 md:grid-cols-3',
+  lg: 'grid-cols-1 md:grid-cols-2',
 }
 
 function ReserveGrid({
@@ -514,11 +530,12 @@ function ReserveGrid({
   selectMode,
   selectedSceneIds,
   onToggleSelect,
+  gridSize,
 }: ReserveGridProps) {
   const { t } = useTranslation()
   return (
     <div className="h-full overflow-y-auto p-3">
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      <div className={`grid ${reserveGridSizeMap[gridSize]} gap-3`}>
         {scenes.map((scene) => {
           const count = sceneCounts[scene.id] ?? null
           const effectiveCount = count ?? defaultCount

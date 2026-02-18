@@ -17,6 +17,11 @@ const en = {
     saving: 'Saving...',
     saveFailed: 'Save failed',
     replace: 'Replace',
+    gridSize: {
+      small: 'S',
+      medium: 'M',
+      large: 'L',
+    },
   },
   nav: {
     projects: 'Projects',

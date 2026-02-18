@@ -3,6 +3,8 @@ import { Link } from '@tanstack/react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowRight01Icon } from '@hugeicons/core-free-icons'
 import { useTranslation } from '@/lib/i18n'
+import { GridSizeToggle } from '@/components/common/grid-size-toggle'
+import { useImageGridSize, type GridSize } from '@/lib/use-image-grid-size'
 
 interface HistoryPanelProps {
   images: Array<{
@@ -16,15 +18,23 @@ interface HistoryPanelProps {
   projectId: number
 }
 
+const historyColsMap: Record<GridSize, number> = { sm: 3, md: 2, lg: 1 }
+
 export const HistoryPanel = memo(function HistoryPanel({ images, projectId }: HistoryPanelProps) {
   const { t } = useTranslation()
+  const { gridSize, setGridSize } = useImageGridSize('history')
+  const cols = historyColsMap[gridSize]
+
   return (
     <div className="p-2 flex flex-col h-full">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
           {t('history.title')}
         </h3>
-        <span className="text-xs text-muted-foreground">{images.length}</span>
+        <div className="flex items-center gap-1.5">
+          <GridSizeToggle value={gridSize} onChange={setGridSize} />
+          <span className="text-xs text-muted-foreground">{images.length}</span>
+        </div>
       </div>
 
       {images.length === 0 ? (
@@ -33,7 +43,7 @@ export const HistoryPanel = memo(function HistoryPanel({ images, projectId }: Hi
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto -mx-1 px-1">
-          <div className="grid grid-cols-2 gap-1">
+          <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
             {images.map((img) => (
               <Link
                 key={img.id}

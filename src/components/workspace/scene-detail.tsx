@@ -19,6 +19,8 @@ import { ConfirmDialog } from '@/components/common/confirm-dialog'
 import { DownloadDialog } from '@/components/common/download-dialog'
 import { TournamentDialog } from './tournament-dialog'
 import { CompareDialog } from './compare-dialog'
+import { GridSizeToggle } from '@/components/common/grid-size-toggle'
+import { useImageGridSize, type GridSize } from '@/lib/use-image-grid-size'
 
 interface SceneDetailProps {
   sceneId: number
@@ -51,22 +53,28 @@ type ImageItem = SceneData['images'][number] & {
 
 const GAP = 6 // gap-1.5 = 6px
 
-function useGridColumns() {
-  const [cols, setCols] = useState(4)
+const sceneDetailSizeMap: Record<GridSize, [number, number, number, number, number]> = {
+  sm: [4, 5, 7, 6, 7],
+  md: [3, 4, 5, 4, 5],
+  lg: [2, 3, 4, 3, 4],
+}
+
+function useGridColumns(gridSize: GridSize) {
+  const [cols, setCols] = useState(sceneDetailSizeMap[gridSize][0])
   useEffect(() => {
+    const bp = sceneDetailSizeMap[gridSize]
     function update() {
       const w = window.innerWidth
-      // Match: grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-4 xl:grid-cols-5
-      if (w >= 1280) setCols(5)
-      else if (w >= 1024) setCols(4)
-      else if (w >= 768) setCols(5)
-      else if (w >= 640) setCols(4)
-      else setCols(3)
+      if (w >= 1280) setCols(bp[4])
+      else if (w >= 1024) setCols(bp[3])
+      else if (w >= 768) setCols(bp[2])
+      else if (w >= 640) setCols(bp[1])
+      else setCols(bp[0])
     }
     update()
     window.addEventListener('resize', update)
     return () => window.removeEventListener('resize', update)
-  }, [])
+  }, [gridSize])
   return cols
 }
 
@@ -187,8 +195,11 @@ export function SceneDetail({
     loadMoreRef.current = false
   }, [sceneId, images.length, sortBy])
 
+  // ── Grid size ──
+  const { gridSize, setGridSize } = useImageGridSize('scene')
+
   // ── Virtualized grid setup ──
-  const cols = useGridColumns()
+  const cols = useGridColumns(gridSize)
   const rootRef = useRef<HTMLDivElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
 
@@ -488,6 +499,7 @@ export function SceneDetail({
                   <SelectItem value="tournament_wins">{t('scene.totalWins')}</SelectItem>
                 </SelectContent>
               </Select>
+              <GridSizeToggle value={gridSize} onChange={setGridSize} />
               {thumbnailImageId !== null && (
                 <button
                   onClick={() => onThumbnailChange(null, null)}
