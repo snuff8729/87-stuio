@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { listProjects, createProject, deleteProject, duplicateProject } from '@/server/functions/projects'
+import { listProjects, createProject, deleteProject, duplicateProject, updateProject } from '@/server/functions/projects'
 import { listJobs } from '@/server/functions/generation'
 import { getSetting } from '@/server/functions/settings'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -34,6 +34,7 @@ import {
   Copy01Icon,
   MoreHorizontalIcon,
   Image02Icon,
+  PencilEdit01Icon,
 } from '@hugeicons/core-free-icons'
 import { useTranslation, type TranslationKeys } from '@/lib/i18n'
 
@@ -116,6 +117,8 @@ function ProjectSelectorPage() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null)
+  const [renameTarget, setRenameTarget] = useState<{ id: number; name: string } | null>(null)
+  const [renameName, setRenameName] = useState('')
   const { t } = useTranslation()
 
   // Sync from loader when navigating back
@@ -166,6 +169,18 @@ function ProjectSelectorPage() {
       router.navigate({ to: '/workspace/$projectId', params: { projectId: String(project.id) } })
     } catch {
       toast.error(t('dashboard.createFailed'))
+    }
+  }
+
+  async function handleRename() {
+    if (!renameTarget || !renameName.trim()) return
+    try {
+      await updateProject({ data: { id: renameTarget.id, name: renameName.trim() } })
+      toast.success(t('dashboard.projectRenamed'))
+      setRenameTarget(null)
+      router.invalidate()
+    } catch {
+      toast.error(t('dashboard.renameFailed'))
     }
   }
 
@@ -328,6 +343,10 @@ function ProjectSelectorPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => { setRenameTarget({ id: p.id, name: p.name }); setRenameName(p.name) }}>
+                    <HugeiconsIcon icon={PencilEdit01Icon} className="size-4" />
+                    {t('dashboard.renameProject')}
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleDuplicate(p.id)}>
                     <HugeiconsIcon icon={Copy01Icon} className="size-4" />
                     {t('dashboard.duplicateProject')}
@@ -395,6 +414,27 @@ function ProjectSelectorPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Rename dialog */}
+      <Dialog open={!!renameTarget} onOpenChange={(open) => !open && setRenameTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('dashboard.renameProject')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              value={renameName}
+              onChange={(e) => setRenameName(e.target.value)}
+              placeholder={t('dashboard.projectName')}
+              onKeyDown={(e) => e.key === 'Enter' && handleRename()}
+              autoFocus
+            />
+            <Button onClick={handleRename} disabled={!renameName.trim()} className="w-full">
+              {t('common.save')}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete confirmation dialog */}
       <ConfirmDialog
