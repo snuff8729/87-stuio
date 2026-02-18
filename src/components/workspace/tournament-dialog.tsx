@@ -298,22 +298,31 @@ export function TournamentDialog({
             </div>
 
             {/* Action buttons */}
-            <div className="border-t border-border px-4 py-2.5 flex items-center justify-center gap-2 shrink-0">
+            <div className="border-t border-border px-3 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] grid grid-cols-2 md:grid-cols-4 gap-1.5 shrink-0">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => handleResult('left')}
                 disabled={transitioning}
-                className="min-w-[100px]"
+                className="w-full"
               >
                 &larr; {t('tournament.leftWin')}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
+                onClick={() => handleResult('right')}
+                disabled={transitioning}
+                className="w-full"
+              >
+                {t('tournament.rightWin')} &rarr;
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => handleResult('both_win')}
                 disabled={transitioning}
-                className="min-w-[100px]"
+                className="w-full"
               >
                 &uarr; {t('tournament.bothWin')}
               </Button>
@@ -322,18 +331,9 @@ export function TournamentDialog({
                 size="sm"
                 onClick={() => handleResult('both_lose')}
                 disabled={transitioning}
-                className="min-w-[100px]"
+                className="w-full"
               >
                 &darr; {t('tournament.bothLose')}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleResult('right')}
-                disabled={transitioning}
-                className="min-w-[100px]"
-              >
-                {t('tournament.rightWin')} &rarr;
               </Button>
             </div>
           </>
