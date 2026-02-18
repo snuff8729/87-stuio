@@ -5,11 +5,23 @@ import { createT } from './t'
 const STORAGE_KEY = '87studio-locale'
 const DEFAULT_LOCALE: Locale = 'en'
 
+const SUPPORTED_LOCALES: Locale[] = ['en', 'ko']
+
+function detectBrowserLocale(): Locale | null {
+  if (typeof navigator === 'undefined') return null
+  const languages = navigator.languages ?? [navigator.language]
+  for (const lang of languages) {
+    const code = lang.toLowerCase().split('-')[0]
+    if (SUPPORTED_LOCALES.includes(code as Locale)) return code as Locale
+  }
+  return null
+}
+
 function getInitialLocale(): Locale {
   if (typeof window === 'undefined') return DEFAULT_LOCALE
   const stored = localStorage.getItem(STORAGE_KEY)
   if (stored === 'en' || stored === 'ko') return stored
-  return DEFAULT_LOCALE
+  return detectBrowserLocale() ?? DEFAULT_LOCALE
 }
 
 interface I18nContextValue {
