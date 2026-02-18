@@ -14,7 +14,7 @@ Warm, professional creative workspace. The interface recedes so images and promp
 
 ## Signature
 
-The `{{placeholder}}` system — amber-tinted variable slots that appear in CodeMirror editors, scene configuration fields, and badges throughout the UI. A visual thread unique to this product.
+The `\\placeholder\\` system — amber-tinted variable slots that appear in CodeMirror editors, scene configuration fields, and badges throughout the UI. A visual thread unique to this product.
 
 ## Color Palette (Dark Only)
 
@@ -95,7 +95,7 @@ Tight gaps (`gap-1.5`), rounded corners (`rounded-lg`), `aspect-square`. Favorit
 `bg-black/90` overlay. Side panel with `bg-card`. Navigation arrows in `text-white/40 hover:text-white/80`. Rating stars in amber.
 
 ### CodeMirror Editor
-Background matches `card` token. Border matches `border` token. Focus ring in amber. `{{placeholder}}` highlighting uses amber at 15% opacity with 30% border.
+Background matches `card` token. Border matches `border` token. Focus ring in amber. `\\placeholder\\` highlighting uses amber at 15% opacity with 30% border.
 
 ## Anti-Patterns
 
