@@ -71,7 +71,15 @@ const config = defineConfig({
   plugins: [
     serveDataFiles(),
     devtools(),
-    nitro(),
+    nitro({
+      handlers: [
+        {
+          route: '/api/**',
+          middleware: true,
+          handler: './src/server/api/data-files.ts',
+        },
+      ],
+    }),
     // this is the plugin that enables path aliases
     viteTsConfigPaths({
       projects: ['./tsconfig.json'],
