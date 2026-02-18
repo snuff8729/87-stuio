@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { toast } from 'sonner'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Upload01Icon, Cancel01Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons'
+import { Upload01Icon, Cancel01Icon, ArrowRight01Icon, Copy01Icon } from '@hugeicons/core-free-icons'
 import { PageHeader } from '@/components/common/page-header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -252,6 +252,33 @@ function InspectPage() {
 
 // ─── Metadata Viewer ──────────────────────────────────────────────────────
 
+function PromptBlock({ label, text, maxHeight = 'max-h-40' }: { label: string; text: string; maxHeight?: string }) {
+  const { t } = useTranslation()
+
+  function handleCopy() {
+    navigator.clipboard.writeText(text)
+    toast.success(t('common.copied'))
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <Label className="text-xs text-muted-foreground">{label}</Label>
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="text-muted-foreground hover:text-foreground transition-colors p-0.5"
+        >
+          <HugeiconsIcon icon={Copy01Icon} className="size-3.5" />
+        </button>
+      </div>
+      <p className={`text-sm font-mono text-foreground/80 whitespace-pre-wrap bg-secondary/50 p-2 rounded-md ${maxHeight} overflow-y-auto`}>
+        {text}
+      </p>
+    </div>
+  )
+}
+
 function MetadataViewer({ metadata }: { metadata: NAIMetadata }) {
   const hasV4Chars = metadata.v4_prompt?.caption?.char_captions &&
     metadata.v4_prompt.caption.char_captions.length > 0
@@ -277,20 +304,10 @@ function MetadataViewer({ metadata }: { metadata: NAIMetadata }) {
         </CardHeader>
         <CardContent className="space-y-3">
           {metadata.prompt && (
-            <div>
-              <Label className="text-xs text-muted-foreground">Positive</Label>
-              <p className="text-sm font-mono text-foreground/80 whitespace-pre-wrap bg-secondary/50 p-2 rounded-md max-h-40 overflow-y-auto mt-1">
-                {metadata.prompt}
-              </p>
-            </div>
+            <PromptBlock label="Positive" text={metadata.prompt} />
           )}
           {metadata.negativePrompt && (
-            <div>
-              <Label className="text-xs text-muted-foreground">Negative</Label>
-              <p className="text-sm font-mono text-foreground/80 whitespace-pre-wrap bg-secondary/50 p-2 rounded-md max-h-32 overflow-y-auto mt-1">
-                {metadata.negativePrompt}
-              </p>
-            </div>
+            <PromptBlock label="Negative" text={metadata.negativePrompt} maxHeight="max-h-32" />
           )}
         </CardContent>
       </Card>
@@ -306,28 +323,17 @@ function MetadataViewer({ metadata }: { metadata: NAIMetadata }) {
               const negChar = metadata.v4_negative_prompt?.caption?.char_captions?.[i]
               return (
                 <div key={i} className="space-y-2">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">
-                      Character {i + 1}
-                      {char.centers.length > 0 && (
-                        <span className="ml-1.5 text-muted-foreground/60">
-                          ({char.centers.map((c) => `${c.x.toFixed(2)}, ${c.y.toFixed(2)}`).join(' | ')})
-                        </span>
-                      )}
-                    </Label>
-                    <p className="text-sm font-mono text-foreground/80 whitespace-pre-wrap bg-secondary/50 p-2 rounded-md max-h-32 overflow-y-auto mt-1">
-                      {char.char_caption}
-                    </p>
-                  </div>
+                  <PromptBlock
+                    label={`Character ${i + 1}${char.centers.length > 0 ? ` (${char.centers.map((c) => `${c.x.toFixed(2)}, ${c.y.toFixed(2)}`).join(' | ')})` : ''}`}
+                    text={char.char_caption}
+                    maxHeight="max-h-32"
+                  />
                   {negChar?.char_caption && (
-                    <div>
-                      <Label className="text-xs text-muted-foreground">
-                        Character {i + 1} Negative
-                      </Label>
-                      <p className="text-sm font-mono text-foreground/80 whitespace-pre-wrap bg-secondary/50 p-2 rounded-md max-h-24 overflow-y-auto mt-1">
-                        {negChar.char_caption}
-                      </p>
-                    </div>
+                    <PromptBlock
+                      label={`Character ${i + 1} Negative`}
+                      text={negChar.char_caption}
+                      maxHeight="max-h-24"
+                    />
                   )}
                 </div>
               )

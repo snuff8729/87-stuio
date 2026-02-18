@@ -17,6 +17,7 @@ const en = {
     saving: 'Saving...',
     saveFailed: 'Save failed',
     replace: 'Replace',
+    copied: 'Copied',
     gridSize: {
       small: 'S',
       medium: 'M',

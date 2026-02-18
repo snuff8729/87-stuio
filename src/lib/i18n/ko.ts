@@ -20,6 +20,7 @@ const ko: DeepStringify<typeof en> = {
     saving: '저장 중...',
     saveFailed: '저장 실패',
     replace: '교체',
+    copied: '복사됨',
     gridSize: {
       small: 'S',
       medium: 'M',
