@@ -595,7 +595,7 @@ function ReserveGrid({
     <div ref={parentRef} className="h-full overflow-y-auto p-3">
       {/* Add scene form (outside virtualized area) */}
       {addingScene && (
-        <div className="mb-3 rounded-lg border border-dashed border-primary/30 bg-primary/5 p-3 flex flex-col justify-center" style={{ maxWidth: `${cardWidth}px` }}>
+        <div data-onboarding="add-scene-form" className="mb-3 rounded-lg border border-dashed border-primary/30 bg-primary/5 p-3 flex flex-col justify-center" style={{ maxWidth: `${cardWidth}px` }}>
           <Input
             ref={newSceneInputRef}
             value={newSceneName}

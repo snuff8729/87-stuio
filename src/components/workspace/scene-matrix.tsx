@@ -193,7 +193,7 @@ export const SceneMatrix = memo(function SceneMatrix({
             </Select>
           </div>
           {addingScene && (
-            <div className="mt-2 rounded-lg border border-primary/30 bg-primary/5 p-2 space-y-1.5">
+            <div data-onboarding="add-scene-form" className="mt-2 rounded-lg border border-primary/30 bg-primary/5 p-2 space-y-1.5">
               <Input
                 ref={newSceneInputRef}
                 value={newSceneName}
@@ -412,7 +412,7 @@ function VirtualSceneList({
 
       <div ref={listRef} className="flex-1 overflow-y-auto px-2 pb-2">
         {addingScene && (
-          <div className="rounded-lg border border-primary/30 bg-primary/5 p-2 space-y-1.5 mb-1">
+          <div data-onboarding="add-scene-form" className="rounded-lg border border-primary/30 bg-primary/5 p-2 space-y-1.5 mb-1">
             <Input
               ref={newSceneInputRef}
               value={newSceneName}
