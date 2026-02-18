@@ -72,7 +72,7 @@ export async function generateImage(
       scale: params.scale ?? 5,
       seed: seed,
       skip_cfg_above_sigma: null,
-      steps: params.steps ?? 23,
+      steps: params.steps ?? 28,
       ucPreset: params.ucPreset ?? 0,
       use_coords: false,
       v4_prompt: {

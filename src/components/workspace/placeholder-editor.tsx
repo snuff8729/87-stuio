@@ -63,6 +63,10 @@ export const PlaceholderEditor = memo(function PlaceholderEditor({
   const [filledCollapsed, setFilledCollapsed] = useState(false)
   const [unusedCollapsed, setUnusedCollapsed] = useState(true)
 
+  // ── Pin focused field to prevent section jump on save ──
+  const pinnedCellRef = useRef<{ key: string; section: 'unfilled' | 'filled' } | null>(null)
+  const [blurTick, setBlurTick] = useState(0)
+
   // ── Scene Data management ──
   const [addingSceneData, setAddingSceneData] = useState(false)
   const [newSceneDataKey, setNewSceneDataKey] = useState('')
@@ -83,6 +87,7 @@ export const PlaceholderEditor = memo(function PlaceholderEditor({
   // Reset local values when scene changes
   useEffect(() => {
     setLocalValues({})
+    pinnedCellRef.current = null
   }, [sceneId])
 
   useEffect(() => () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current) }, [])
@@ -139,6 +144,15 @@ export const PlaceholderEditor = memo(function PlaceholderEditor({
   function scheduleSave() {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(() => flushSave(), 800)
+  }
+
+  function handleSectionBlur(ck: string) {
+    requestAnimationFrame(() => {
+      if (pinnedCellRef.current?.key === ck) {
+        pinnedCellRef.current = null
+        setBlurTick((t) => t + 1)
+      }
+    })
   }
 
   const flushSave = useCallback(async () => {
@@ -213,10 +227,19 @@ export const PlaceholderEditor = memo(function PlaceholderEditor({
     }
   }
 
-  // ── Classification: use SERVER data so textareas don't move during typing ──
+  // ── Classification: use SERVER data + pin focused field in its section ──
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const classifiedKeys = useMemo(() => {
-    const unfilledGeneral = generalPlaceholderKeys.filter((key) => !scenePlaceholders[key])
-    const filledGeneral = generalPlaceholderKeys.filter((key) => !!scenePlaceholders[key])
+    const pinned = pinnedCellRef.current
+
+    const unfilledGeneral = generalPlaceholderKeys.filter((key) => {
+      if (pinned?.key === `g:${key}`) return pinned.section === 'unfilled'
+      return !scenePlaceholders[key]
+    })
+    const filledGeneral = generalPlaceholderKeys.filter((key) => {
+      if (pinned?.key === `g:${key}`) return pinned.section === 'filled'
+      return !!scenePlaceholders[key]
+    })
 
     const unfilledChars: Array<{ charId: number; charName: string; keys: string[] }> = []
     const filledChars: Array<{ charId: number; charName: string; keys: Array<{ key: string; isTemplate: boolean; generalValue: string }> }> = []
@@ -229,8 +252,15 @@ export const PlaceholderEditor = memo(function PlaceholderEditor({
       for (const key of keys) {
         const ownValue = characterOverrides[char.id]?.[key] ?? ''
         const generalValue = scenePlaceholders[key] ?? ''
+        const ck = `c:${char.id}:${key}`
 
-        if (!ownValue && !generalValue) {
+        if (pinned?.key === ck) {
+          if (pinned.section === 'unfilled') {
+            unfilled.push(key)
+          } else {
+            filled.push({ key, isTemplate: !ownValue && !!generalValue, generalValue })
+          }
+        } else if (!ownValue && !generalValue) {
           unfilled.push(key)
         } else {
           filled.push({ key, isTemplate: !ownValue && !!generalValue, generalValue })
@@ -245,7 +275,7 @@ export const PlaceholderEditor = memo(function PlaceholderEditor({
     const totalFilled = filledGeneral.length + filledChars.reduce((s, e) => s + e.keys.length, 0)
 
     return { unfilledGeneral, filledGeneral, unfilledChars, filledChars, totalUnfilled, totalFilled }
-  }, [scenePlaceholders, characterOverrides, generalPlaceholderKeys, characterPlaceholderKeys, characters])
+  }, [scenePlaceholders, characterOverrides, generalPlaceholderKeys, characterPlaceholderKeys, characters, blurTick])
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const filledCounts = useMemo(() => {
@@ -497,6 +527,8 @@ export const PlaceholderEditor = memo(function PlaceholderEditor({
                   <textarea
                     value={getCellValue(key, 'general')}
                     onChange={(e) => handleCellChange('general', key, e.target.value)}
+                    onFocus={() => { pinnedCellRef.current = { key: `g:${key}`, section: 'unfilled' } }}
+                    onBlur={() => handleSectionBlur(`g:${key}`)}
                     rows={2}
                     className="w-full rounded-lg border border-border bg-input/30 px-3 py-2 text-base font-mono placeholder:text-muted-foreground/40 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 focus:outline-none resize-y min-h-12 sm:min-h-[5rem] transition-all"
                     placeholder={t('scene.valueFor', { key })}
@@ -520,6 +552,8 @@ export const PlaceholderEditor = memo(function PlaceholderEditor({
                   <textarea
                     value={getCellValue(key, charId)}
                     onChange={(e) => handleCellChange(charId, key, e.target.value)}
+                    onFocus={() => { pinnedCellRef.current = { key: `c:${charId}:${key}`, section: 'unfilled' } }}
+                    onBlur={() => handleSectionBlur(`c:${charId}:${key}`)}
                     rows={2}
                     className="w-full rounded-lg border border-border bg-input/30 px-3 py-2 text-base font-mono placeholder:text-muted-foreground/40 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 focus:outline-none resize-y min-h-12 sm:min-h-[5rem] transition-all"
                     placeholder={`${charName}: ${key}`}
@@ -566,6 +600,8 @@ export const PlaceholderEditor = memo(function PlaceholderEditor({
                       <textarea
                         value={getCellValue(key, 'general')}
                         onChange={(e) => handleCellChange('general', key, e.target.value)}
+                        onFocus={() => { pinnedCellRef.current = { key: `g:${key}`, section: 'filled' } }}
+                        onBlur={() => handleSectionBlur(`g:${key}`)}
                         rows={2}
                         className="w-full rounded-lg border border-border bg-input/30 px-3 py-2 text-base font-mono placeholder:text-muted-foreground/40 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 focus:outline-none resize-y min-h-12 sm:min-h-[5rem] transition-all"
                         placeholder={t('scene.valueFor', { key })}
@@ -610,6 +646,8 @@ export const PlaceholderEditor = memo(function PlaceholderEditor({
                             <textarea
                               value={getEffectiveCharValue(key, charId)}
                               onChange={(e) => handleCellChange(charId, key, e.target.value)}
+                              onFocus={() => { pinnedCellRef.current = { key: `c:${charId}:${key}`, section: 'filled' } }}
+                              onBlur={() => handleSectionBlur(`c:${charId}:${key}`)}
                               rows={2}
                               className="w-full rounded-lg border border-border bg-input/30 px-3 py-2 text-base font-mono placeholder:text-muted-foreground/40 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 focus:outline-none resize-y min-h-12 sm:min-h-[5rem] transition-all"
                               placeholder={`${charName}: ${key}`}
