@@ -94,6 +94,13 @@ const ko: DeepStringify<typeof en> = {
     scanFirst: '스캔하여 DB에 연결되지 않은 고아 파일을 탐지합니다.',
     images: '이미지',
     thumbnails: '썸네일',
+    validate: '검증',
+    validating: '검증 중...',
+    apiKeyValid: 'API 키가 유효합니다',
+    apiKeyInvalid: '유효하지 않은 API 키입니다',
+    apiKeyEmpty: 'API 키를 먼저 입력하세요',
+    apiKeyNetworkError: 'NAI 서버에 연결할 수 없습니다',
+    apiKeyUnknownError: '검증에 실패했습니다',
   },
   gallery: {
     title: '갤러리',

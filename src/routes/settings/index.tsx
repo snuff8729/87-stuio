@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Slider } from '@/components/ui/slider'
-import { getSetting, setSetting } from '@/server/functions/settings'
+import { getSetting, setSetting, validateApiKey } from '@/server/functions/settings'
 import { getStorageStats, cleanupOrphanFiles } from '@/server/functions/storage'
 import { useTranslation } from '@/lib/i18n'
 import type { Locale } from '@/lib/i18n'
@@ -68,6 +68,7 @@ function SettingsPage() {
   const [showKey, setShowKey] = useState(false)
   const [delay, setDelay] = useState(Number(initialDelay))
   const [saving, setSaving] = useState(false)
+  const [validating, setValidating] = useState(false)
   const { t, locale, setLocale } = useTranslation()
 
   // Storage management state
@@ -103,6 +104,29 @@ function SettingsPage() {
       toast.error(t('settings.cleanupFailed'))
     }
     setCleaningUp(false)
+  }
+
+  async function handleValidate() {
+    if (!apiKey.trim()) {
+      toast.error(t('settings.apiKeyEmpty'))
+      return
+    }
+    setValidating(true)
+    try {
+      const result = await validateApiKey({ data: apiKey })
+      if (result.valid) {
+        toast.success(t('settings.apiKeyValid'))
+      } else if (result.error === 'unauthorized') {
+        toast.error(t('settings.apiKeyInvalid'))
+      } else if (result.error === 'network') {
+        toast.error(t('settings.apiKeyNetworkError'))
+      } else {
+        toast.error(t('settings.apiKeyUnknownError'))
+      }
+    } catch {
+      toast.error(t('settings.apiKeyUnknownError'))
+    }
+    setValidating(false)
   }
 
   async function handleSave() {
@@ -141,6 +165,9 @@ function SettingsPage() {
                 />
                 <Button variant="outline" onClick={() => setShowKey(!showKey)}>
                   {showKey ? t('common.hide') : t('common.show')}
+                </Button>
+                <Button variant="outline" onClick={handleValidate} disabled={validating}>
+                  {validating ? t('settings.validating') : t('settings.validate')}
                 </Button>
               </div>
             </div>

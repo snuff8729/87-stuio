@@ -91,6 +91,13 @@ const en = {
     scanFirst: 'Scan to detect orphan files not linked to any database record.',
     images: 'Images',
     thumbnails: 'Thumbnails',
+    validate: 'Validate',
+    validating: 'Validating...',
+    apiKeyValid: 'API key is valid',
+    apiKeyInvalid: 'Invalid API key',
+    apiKeyEmpty: 'Please enter an API key first',
+    apiKeyNetworkError: 'Could not connect to NAI server',
+    apiKeyUnknownError: 'Validation failed',
   },
   gallery: {
     title: 'Gallery',

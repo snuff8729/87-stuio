@@ -30,6 +30,32 @@ export const setSetting = createServerFn({ method: 'POST' })
     return { success: true }
   })
 
+export const validateApiKey = createServerFn({ method: 'POST' })
+  .inputValidator((apiKey: string) => apiKey)
+  .handler(async ({ data: apiKey }) => {
+    if (!apiKey.trim()) {
+      return { valid: false, error: 'empty' as const }
+    }
+
+    try {
+      const response = await fetch('https://api.novelai.net/user/subscription', {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      })
+
+      if (response.ok) {
+        return { valid: true, error: null }
+      }
+
+      if (response.status === 401) {
+        return { valid: false, error: 'unauthorized' as const }
+      }
+
+      return { valid: false, error: 'unknown' as const }
+    } catch {
+      return { valid: false, error: 'network' as const }
+    }
+  })
+
 export const getAllSettings = createServerFn({ method: 'GET' }).handler(async () => {
   return db.select().from(settings).all()
 })
