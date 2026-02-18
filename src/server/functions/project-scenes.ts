@@ -89,12 +89,11 @@ export const addProjectScene = createServerFn({ method: 'POST' })
         .get()
     }
 
-    // Get next sort order
-    const maxSort = db
-      .select({ max: sql<number>`coalesce(max(${projectScenes.sortOrder}), -1)` })
-      .from(projectScenes)
+    // Shift existing scenes' sort order to make room at the front
+    db.update(projectScenes)
+      .set({ sortOrder: sql`${projectScenes.sortOrder} + 1` })
       .where(eq(projectScenes.projectScenePackId, pack.id))
-      .get()
+      .run()
 
     const scene = db
       .insert(projectScenes)
@@ -102,7 +101,7 @@ export const addProjectScene = createServerFn({ method: 'POST' })
         projectScenePackId: pack.id,
         name: data.name,
         placeholders: '{}',
-        sortOrder: (maxSort?.max ?? -1) + 1,
+        sortOrder: 0,
       })
       .returning()
       .get()
