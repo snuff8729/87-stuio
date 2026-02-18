@@ -208,6 +208,49 @@ export const duplicateProjectScene = createServerFn({ method: 'POST' })
     return newScene
   })
 
+export const bulkDeleteProjectScenes = createServerFn({ method: 'POST' })
+  .inputValidator((sceneIds: number[]) => sceneIds)
+  .handler(async ({ data: sceneIds }) => {
+    if (sceneIds.length === 0) return { success: true, deletedCount: 0 }
+
+    let deletedCount = 0
+    for (const sceneId of sceneIds) {
+      const scene = db
+        .select({ projectScenePackId: projectScenes.projectScenePackId })
+        .from(projectScenes)
+        .where(eq(projectScenes.id, sceneId))
+        .get()
+
+      if (!scene) continue
+
+      // Collect file paths before cascade delete
+      const files = db
+        .select({ filePath: generatedImages.filePath, thumbnailPath: generatedImages.thumbnailPath })
+        .from(generatedImages)
+        .where(eq(generatedImages.projectSceneId, sceneId))
+        .all()
+
+      db.delete(projectScenes).where(eq(projectScenes.id, sceneId)).run()
+      deleteImageFiles(files)
+      deletedCount++
+
+      // If parent pack has no remaining scenes, delete it too
+      const remaining = db
+        .select({ count: sql<number>`count(*)` })
+        .from(projectScenes)
+        .where(eq(projectScenes.projectScenePackId, scene.projectScenePackId))
+        .get()
+
+      if ((remaining?.count ?? 0) === 0) {
+        db.delete(projectScenePacks)
+          .where(eq(projectScenePacks.id, scene.projectScenePackId))
+          .run()
+      }
+    }
+
+    return { success: true, deletedCount }
+  })
+
 export const bulkUpdatePlaceholders = createServerFn({ method: 'POST' })
   .inputValidator(
     (data: { updates: Array<{ sceneId: number; placeholders: string }> }) => data,

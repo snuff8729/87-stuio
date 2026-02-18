@@ -32,6 +32,7 @@ interface DownloadDialogProps {
   availableScenes?: SceneItem[]
   filenameTemplate?: string
   selectedImageIds?: number[]
+  projectSceneIds?: number[]
 }
 
 export function DownloadDialog({
@@ -41,6 +42,7 @@ export function DownloadDialog({
   availableScenes,
   filenameTemplate: initialTemplate,
   selectedImageIds,
+  projectSceneIds: fixedSceneIds,
 }: DownloadDialogProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
@@ -108,6 +110,7 @@ export function DownloadDialog({
   }, [template, projectName])
 
   const isSelectedMode = selectedImageIds && selectedImageIds.length > 0
+  const isFixedSceneMode = fixedSceneIds && fixedSceneIds.length > 0
 
   async function handleDownload() {
     setPreparing(true)
@@ -116,13 +119,21 @@ export function DownloadDialog({
         data: {
           ...(isSelectedMode
             ? { imageIds: selectedImageIds }
-            : {
-                projectId,
-                projectSceneIds: allSelected ? undefined : [...selectedSceneIds],
-                isFavorite: favoritesOnly || undefined,
-                minRating: minRating > 0 ? minRating : undefined,
-                minWinRate: minWinRate > 0 ? minWinRate : undefined,
-              }),
+            : isFixedSceneMode
+              ? {
+                  projectId,
+                  projectSceneIds: fixedSceneIds,
+                  isFavorite: favoritesOnly || undefined,
+                  minRating: minRating > 0 ? minRating : undefined,
+                  minWinRate: minWinRate > 0 ? minWinRate : undefined,
+                }
+              : {
+                  projectId,
+                  projectSceneIds: allSelected ? undefined : [...selectedSceneIds],
+                  isFavorite: favoritesOnly || undefined,
+                  minRating: minRating > 0 ? minRating : undefined,
+                  minWinRate: minWinRate > 0 ? minWinRate : undefined,
+                }),
           filenameTemplate: template || undefined,
         },
       })
@@ -194,7 +205,7 @@ export function DownloadDialog({
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
-          {/* Filters (only when not downloading selected images) */}
+          {/* Filters (only when not downloading selected images or fixed scenes) */}
           {!isSelectedMode && (
             <section className="space-y-3">
               <Label className="text-sm font-medium">{t('export.filters')}</Label>
@@ -245,8 +256,8 @@ export function DownloadDialog({
                 />
               </div>
 
-              {/* Scene Selection — inline search + checklist */}
-              {availableScenes && availableScenes.length > 0 && (
+              {/* Scene Selection — inline search + checklist (hidden when fixed scene IDs provided) */}
+              {!isFixedSceneMode && availableScenes && availableScenes.length > 0 && (
                 <SceneChecklist
                   scenesByPack={scenesByPack}
                   selectedSceneIds={selectedSceneIds}

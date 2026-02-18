@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, memo } from 'react'
+import { useState, useRef, useMemo, useCallback, memo } from 'react'
 import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -13,9 +13,13 @@ import {
   Search01Icon,
   SortingDownIcon,
   Cancel01Icon,
+  Tick02Icon,
+  Download04Icon,
+  FileExportIcon,
 } from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import { NumberStepper } from '@/components/ui/number-stepper'
 import {
   Select,
@@ -25,8 +29,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
+import { DownloadDialog } from '@/components/common/download-dialog'
+import { ConvertToTemplateDialog } from './convert-to-template-dialog'
 import { SceneMatrix } from './scene-matrix'
 import { useTranslation } from '@/lib/i18n'
+import { bulkDeleteProjectScenes } from '@/server/functions/project-scenes'
 
 export type SceneSortBy = 'default' | 'name_asc' | 'name_desc' | 'images_desc' | 'images_asc' | 'created_asc' | 'created_desc'
 
@@ -57,6 +64,7 @@ interface ScenePanelProps {
     }>
   }>
   projectId: number
+  projectName?: string
   generalPlaceholderKeys: string[]
   characterPlaceholderKeys: CharacterPlaceholderKeyEntry[]
   characters: Array<{
@@ -88,6 +96,7 @@ interface ScenePanelProps {
 export const ScenePanel = memo(function ScenePanel({
   scenePacks,
   projectId,
+  projectName,
   generalPlaceholderKeys,
   characterPlaceholderKeys,
   characters,
@@ -113,6 +122,25 @@ export const ScenePanel = memo(function ScenePanel({
   const { t } = useTranslation()
   const [searchVisible, setSearchVisible] = useState(searchQuery.length > 0)
   const searchInputRef = useRef<HTMLInputElement>(null)
+
+  // ── Selection mode ──
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedSceneIds, setSelectedSceneIds] = useState<Set<number>>(new Set())
+  const [convertDialogOpen, setConvertDialogOpen] = useState(false)
+
+  const exitSelectMode = useCallback(() => {
+    setSelectMode(false)
+    setSelectedSceneIds(new Set())
+  }, [])
+
+  const toggleSelectScene = useCallback((id: number) => {
+    setSelectedSceneIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
 
   const sortedScenePacks = useMemo(() => {
     if (sortBy === 'default') return scenePacks
@@ -147,6 +175,33 @@ export const ScenePanel = memo(function ScenePanel({
   }, [sortedScenePacks, searchQuery])
 
   const allScenes = filteredScenePacks.flatMap((pack) => pack.scenes)
+  const allSceneIds = useMemo(() => new Set(allScenes.map((s) => s.id)), [allScenes])
+  const allScenesSelected = selectedSceneIds.size > 0 && selectedSceneIds.size === allSceneIds.size && [...selectedSceneIds].every((id) => allSceneIds.has(id))
+
+  const toggleSelectAll = useCallback(() => {
+    if (allScenesSelected) {
+      setSelectedSceneIds(new Set())
+    } else {
+      setSelectedSceneIds(new Set(allSceneIds))
+    }
+  }, [allScenesSelected, allSceneIds])
+
+  const selectedScenesInfo = useMemo(
+    () => allScenes.filter((s) => selectedSceneIds.has(s.id)),
+    [allScenes, selectedSceneIds],
+  )
+
+  async function handleBulkDelete() {
+    const ids = [...selectedSceneIds]
+    try {
+      await bulkDeleteProjectScenes({ data: ids })
+      toast.success(t('scene.bulkDeleteSuccess', { count: ids.length }))
+      exitSelectMode()
+      onPlaceholdersChange()
+    } catch {
+      toast.error(t('scene.bulkDeleteFailed'))
+    }
+  }
 
   // ── Add scene state (shared) ──
   const [addingScene, setAddingScene] = useState(false)
@@ -197,75 +252,106 @@ export const ScenePanel = memo(function ScenePanel({
     <div className="flex flex-col h-full">
       {/* ── Mode toggle tab bar ── */}
       <div className="flex items-center gap-1 px-3 py-2 border-b border-border shrink-0">
-        <div className="flex items-center bg-secondary/40 rounded-lg p-0.5">
-          <button
-            onClick={() => onViewModeChange('reserve')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-              viewMode === 'reserve'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <HugeiconsIcon icon={GridIcon} className="size-5" />
-            {t('scene.reserve')}
-          </button>
-          <button
-            onClick={() => onViewModeChange('edit')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-              viewMode === 'edit'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <HugeiconsIcon icon={PencilEdit02Icon} className="size-5" />
-            {t('scene.edit')}
-          </button>
-        </div>
+        {selectMode ? (
+          <>
+            <span className="text-sm font-medium text-foreground">
+              {t('scene.selectedCount', { count: selectedSceneIds.size })}
+            </span>
+            <button
+              onClick={toggleSelectAll}
+              className="text-xs text-primary hover:underline ml-2"
+            >
+              {allScenesSelected ? t('scene.deselectAll') : t('scene.selectAll')}
+            </button>
+            <div className="flex-1" />
+            <Button size="xs" variant="ghost" onClick={exitSelectMode}>
+              {t('common.cancel')}
+            </Button>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center bg-secondary/40 rounded-lg p-0.5">
+              <button
+                onClick={() => onViewModeChange('reserve')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                  viewMode === 'reserve'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <HugeiconsIcon icon={GridIcon} className="size-5" />
+                {t('scene.reserve')}
+              </button>
+              <button
+                onClick={() => onViewModeChange('edit')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                  viewMode === 'edit'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <HugeiconsIcon icon={PencilEdit02Icon} className="size-5" />
+                {t('scene.edit')}
+              </button>
+            </div>
 
-        <div className="flex-1" />
+            <div className="flex-1" />
 
-        {/* Sort dropdown */}
-        <Select value={sortBy} onValueChange={onSortByChange}>
-          <SelectTrigger size="sm" className="h-7 w-auto gap-1.5 text-xs text-muted-foreground border-none bg-transparent hover:bg-secondary/80 px-2">
-            <HugeiconsIcon icon={SortingDownIcon} className="size-4" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="default">{t('scene.sortDefault')}</SelectItem>
-            <SelectItem value="name_asc">{t('scene.sortNameAsc')}</SelectItem>
-            <SelectItem value="name_desc">{t('scene.sortNameDesc')}</SelectItem>
-            <SelectItem value="images_desc">{t('scene.sortImagesDesc')}</SelectItem>
-            <SelectItem value="images_asc">{t('scene.sortImagesAsc')}</SelectItem>
-            <SelectItem value="created_asc">{t('scene.sortCreatedAsc')}</SelectItem>
-            <SelectItem value="created_desc">{t('scene.sortCreatedDesc')}</SelectItem>
-          </SelectContent>
-        </Select>
+            {/* Sort dropdown */}
+            <Select value={sortBy} onValueChange={onSortByChange}>
+              <SelectTrigger size="sm" className="h-7 w-auto gap-1.5 text-xs text-muted-foreground border-none bg-transparent hover:bg-secondary/80 px-2">
+                <HugeiconsIcon icon={SortingDownIcon} className="size-4" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">{t('scene.sortDefault')}</SelectItem>
+                <SelectItem value="name_asc">{t('scene.sortNameAsc')}</SelectItem>
+                <SelectItem value="name_desc">{t('scene.sortNameDesc')}</SelectItem>
+                <SelectItem value="images_desc">{t('scene.sortImagesDesc')}</SelectItem>
+                <SelectItem value="images_asc">{t('scene.sortImagesAsc')}</SelectItem>
+                <SelectItem value="created_asc">{t('scene.sortCreatedAsc')}</SelectItem>
+                <SelectItem value="created_desc">{t('scene.sortCreatedDesc')}</SelectItem>
+              </SelectContent>
+            </Select>
 
-        {/* Search toggle */}
-        <button
-          onClick={() => {
-            const next = !searchVisible
-            setSearchVisible(next)
-            if (!next) onSearchQueryChange('')
-            else setTimeout(() => searchInputRef.current?.focus(), 50)
-          }}
-          className={`rounded-md p-1.5 transition-colors ${searchVisible ? 'text-primary bg-secondary/80' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/80'}`}
-          title={t('scene.searchScenes')}
-        >
-          <HugeiconsIcon icon={Search01Icon} className="size-5" />
-        </button>
+            {/* Search toggle */}
+            <button
+              onClick={() => {
+                const next = !searchVisible
+                setSearchVisible(next)
+                if (!next) onSearchQueryChange('')
+                else setTimeout(() => searchInputRef.current?.focus(), 50)
+              }}
+              className={`rounded-md p-1.5 transition-colors ${searchVisible ? 'text-primary bg-secondary/80' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/80'}`}
+              title={t('scene.searchScenes')}
+            >
+              <HugeiconsIcon icon={Search01Icon} className="size-5" />
+            </button>
 
-        {/* Add scene button */}
-        <button
-          onClick={() => {
-            setAddingScene(true)
-            setTimeout(() => newSceneInputRef.current?.focus(), 50)
-          }}
-          className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
-          title="Add Scene"
-        >
-          <HugeiconsIcon icon={Add01Icon} className="size-5" />
-        </button>
+            {/* Select mode toggle (only in reserve view) */}
+            {viewMode === 'reserve' && totalSceneCount > 0 && (
+              <button
+                onClick={() => setSelectMode(true)}
+                className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
+                title={t('scene.selectMode')}
+              >
+                <HugeiconsIcon icon={Tick02Icon} className="size-5" />
+              </button>
+            )}
+
+            {/* Add scene button */}
+            <button
+              onClick={() => {
+                setAddingScene(true)
+                setTimeout(() => newSceneInputRef.current?.focus(), 50)
+              }}
+              className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
+              title="Add Scene"
+            >
+              <HugeiconsIcon icon={Add01Icon} className="size-5" />
+            </button>
+          </>
+        )}
       </div>
 
       {/* ── Search bar ── */}
@@ -318,6 +404,9 @@ export const ScenePanel = memo(function ScenePanel({
             onNewSceneNameChange={setNewSceneName}
             onAddScene={handleAddScene}
             onCancelAdd={() => { setAddingScene(false); setNewSceneName('') }}
+            selectMode={selectMode}
+            selectedSceneIds={selectedSceneIds}
+            onToggleSelect={toggleSelectScene}
           />
         ) : (
           <SceneMatrix
@@ -338,6 +427,43 @@ export const ScenePanel = memo(function ScenePanel({
           />
         )}
       </div>
+
+      {/* ── Selection action bar ── */}
+      {selectMode && selectedSceneIds.size > 0 && (
+        <div className="fixed bottom-16 lg:bottom-12 left-1/2 -translate-x-1/2 z-40 bg-card border border-border rounded-xl px-3 py-2 flex items-center justify-center gap-2 lg:gap-3 flex-wrap shadow-lg max-w-[calc(100vw-1rem)]">
+          <span className="text-sm font-medium">{t('scene.selectedCount', { count: selectedSceneIds.size })}</span>
+          <DownloadDialog
+            trigger={
+              <Button size="sm" variant="outline">
+                <HugeiconsIcon icon={Download04Icon} className="size-4" />
+                {t('export.export')}
+              </Button>
+            }
+            projectId={projectId}
+            projectName={projectName}
+            projectSceneIds={[...selectedSceneIds]}
+          />
+          <Button size="sm" variant="outline" onClick={() => setConvertDialogOpen(true)}>
+            <HugeiconsIcon icon={FileExportIcon} className="size-4" />
+            {t('scene.convertToTemplate')}
+          </Button>
+          <ConfirmDialog
+            trigger={<Button size="sm" variant="destructive">{t('common.delete')}</Button>}
+            title={t('scene.bulkDelete')}
+            description={t('scene.bulkDeleteDesc', { count: selectedSceneIds.size })}
+            variant="destructive"
+            onConfirm={handleBulkDelete}
+          />
+          <Button size="sm" variant="ghost" onClick={exitSelectMode}>{t('common.cancel')}</Button>
+        </div>
+      )}
+
+      {/* ── Convert to template dialog ── */}
+      <ConvertToTemplateDialog
+        open={convertDialogOpen}
+        onOpenChange={setConvertDialogOpen}
+        scenes={selectedScenesInfo.map((s) => ({ id: s.id, name: s.name }))}
+      />
     </div>
   )
 })
@@ -366,6 +492,9 @@ interface ReserveGridProps {
   onNewSceneNameChange: (name: string) => void
   onAddScene: () => void
   onCancelAdd: () => void
+  selectMode: boolean
+  selectedSceneIds: Set<number>
+  onToggleSelect: (id: number) => void
 }
 
 function ReserveGrid({
@@ -382,6 +511,9 @@ function ReserveGrid({
   onNewSceneNameChange,
   onAddScene,
   onCancelAdd,
+  selectMode,
+  selectedSceneIds,
+  onToggleSelect,
 }: ReserveGridProps) {
   const { t } = useTranslation()
   return (
@@ -390,15 +522,20 @@ function ReserveGrid({
         {scenes.map((scene) => {
           const count = sceneCounts[scene.id] ?? null
           const effectiveCount = count ?? defaultCount
+          const isSelected = selectMode && selectedSceneIds.has(scene.id)
 
           return (
             <div
               key={scene.id}
               className={`rounded-lg border transition-all group/card ${
-                effectiveCount > 0
-                  ? 'border-primary/30 bg-primary/5'
-                  : 'border-border bg-secondary/10'
+                isSelected
+                  ? 'border-primary ring-2 ring-primary/50 bg-primary/10'
+                  : effectiveCount > 0
+                    ? 'border-primary/30 bg-primary/5'
+                    : 'border-border bg-secondary/10'
               }`}
+              onClick={selectMode ? () => onToggleSelect(scene.id) : undefined}
+              role={selectMode ? 'button' : undefined}
             >
               {/* Thumbnail */}
               <div className="relative">
@@ -414,6 +551,17 @@ function ReserveGrid({
                 ) : (
                   <div className="aspect-[3/4] rounded-t-lg bg-secondary/40 flex items-center justify-center">
                     <HugeiconsIcon icon={Image02Icon} className="size-6 text-muted-foreground/15" />
+                  </div>
+                )}
+
+                {/* Select checkbox */}
+                {selectMode && (
+                  <div className="absolute top-1.5 left-1.5">
+                    <Checkbox
+                      checked={isSelected}
+                      tabIndex={-1}
+                      className="pointer-events-none bg-black/40 border-white/60 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    />
                   </div>
                 )}
 
@@ -433,53 +581,57 @@ function ReserveGrid({
                   <div className="text-sm font-medium truncate flex-1 text-foreground/90">
                     {scene.name}
                   </div>
-                  <Link
-                    to="/workspace/$projectId/scenes/$sceneId"
-                    params={{ projectId: String(projectId), sceneId: String(scene.id) }}
-                    className="shrink-0 rounded-md p-1 text-muted-foreground hover:text-primary hover:bg-secondary/80 transition-colors"
-                    title="View gallery"
-                  >
-                    <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" />
-                  </Link>
+                  {!selectMode && (
+                    <Link
+                      to="/workspace/$projectId/scenes/$sceneId"
+                      params={{ projectId: String(projectId), sceneId: String(scene.id) }}
+                      className="shrink-0 rounded-md p-1 text-muted-foreground hover:text-primary hover:bg-secondary/80 transition-colors"
+                      title="View gallery"
+                    >
+                      <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" />
+                    </Link>
+                  )}
                 </div>
 
-                {/* Count stepper + delete */}
-                <div className="flex items-center gap-1 mt-2">
-                  <NumberStepper
-                    value={count}
-                    onChange={(v) => onSceneCountChange(scene.id, v)}
-                    min={0}
-                    max={100}
-                    placeholder={String(defaultCount)}
-                  />
-                  {count != null && (
-                    <button
-                      onClick={() => onSceneCountChange(scene.id, null)}
-                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                      title="Reset to default"
-                    >
-                      &times;
-                    </button>
-                  )}
-                  <div className="flex-1" />
-                  <button
-                    onClick={() => onDuplicateScene(scene.id)}
-                    className="rounded-md p-1 text-muted-foreground/40 hover:text-foreground hover:bg-secondary/80 transition-all"
-                    title={t('scene.duplicateScene')}
-                  >
-                    <HugeiconsIcon icon={Copy01Icon} className="size-3.5" />
-                  </button>
-                  <ConfirmDialog
-                    trigger={
-                      <button className="rounded-md p-1 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-all">
-                        <HugeiconsIcon icon={Delete02Icon} className="size-3.5" />
+                {/* Count stepper + delete (hidden in select mode) */}
+                {!selectMode && (
+                  <div className="flex items-center gap-1 mt-2">
+                    <NumberStepper
+                      value={count}
+                      onChange={(v) => onSceneCountChange(scene.id, v)}
+                      min={0}
+                      max={100}
+                      placeholder={String(defaultCount)}
+                    />
+                    {count != null && (
+                      <button
+                        onClick={() => onSceneCountChange(scene.id, null)}
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        title="Reset to default"
+                      >
+                        &times;
                       </button>
-                    }
-                    title={t('scene.deleteScene')}
-                    description={t('scene.deleteSceneDesc', { name: scene.name })}
-                    onConfirm={() => onDeleteScene(scene.id)}
-                  />
-                </div>
+                    )}
+                    <div className="flex-1" />
+                    <button
+                      onClick={() => onDuplicateScene(scene.id)}
+                      className="rounded-md p-1 text-muted-foreground/40 hover:text-foreground hover:bg-secondary/80 transition-all"
+                      title={t('scene.duplicateScene')}
+                    >
+                      <HugeiconsIcon icon={Copy01Icon} className="size-3.5" />
+                    </button>
+                    <ConfirmDialog
+                      trigger={
+                        <button className="rounded-md p-1 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-all">
+                          <HugeiconsIcon icon={Delete02Icon} className="size-3.5" />
+                        </button>
+                      }
+                      title={t('scene.deleteScene')}
+                      description={t('scene.deleteSceneDesc', { name: scene.name })}
+                      onConfirm={() => onDeleteScene(scene.id)}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )

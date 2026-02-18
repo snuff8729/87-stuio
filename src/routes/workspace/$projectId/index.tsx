@@ -572,6 +572,7 @@ function WorkspacePage() {
         <ScenePanel
           scenePacks={scenePacks}
           projectId={projectId}
+          projectName={data.project.name}
           generalPlaceholderKeys={stableGeneralKeys}
           characterPlaceholderKeys={characterPlaceholderKeys}
           characters={data.characters}

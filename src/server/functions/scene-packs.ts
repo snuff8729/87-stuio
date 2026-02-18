@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { db } from '../db'
-import { scenePacks, scenes } from '../db/schema'
-import { eq, desc } from 'drizzle-orm'
+import { scenePacks, scenes, projectScenes } from '../db/schema'
+import { eq, desc, inArray } from 'drizzle-orm'
 import { createLogger } from '../services/logger'
 
 const log = createLogger('fn.scenePacks')
@@ -53,4 +53,49 @@ export const deleteScenePack = createServerFn({ method: 'POST' })
     log.info('delete', 'Scene pack deleted', { scenePackId: id })
     db.delete(scenePacks).where(eq(scenePacks.id, id)).run()
     return { success: true }
+  })
+
+export const createScenePackFromProjectScenes = createServerFn({ method: 'POST' })
+  .inputValidator((data: { name: string; projectSceneIds: number[] }) => data)
+  .handler(async ({ data }) => {
+    if (!data.name.trim()) throw new Error('Pack name is required')
+    if (data.projectSceneIds.length === 0) throw new Error('No scenes selected')
+
+    // Fetch project scenes
+    const pScenes = db
+      .select()
+      .from(projectScenes)
+      .where(inArray(projectScenes.id, data.projectSceneIds))
+      .orderBy(projectScenes.sortOrder)
+      .all()
+
+    if (pScenes.length === 0) throw new Error('No scenes found')
+
+    // Create new global scene pack
+    const pack = db
+      .insert(scenePacks)
+      .values({ name: data.name.trim() })
+      .returning()
+      .get()
+
+    // Insert scenes from project scenes
+    for (let i = 0; i < pScenes.length; i++) {
+      const ps = pScenes[i]
+      db.insert(scenes)
+        .values({
+          scenePackId: pack.id,
+          name: ps.name,
+          placeholders: ps.placeholders || '{}',
+          sortOrder: i,
+        })
+        .run()
+    }
+
+    log.info('createFromProjectScenes', 'Scene pack created from project scenes', {
+      scenePackId: pack.id,
+      name: data.name,
+      sceneCount: pScenes.length,
+    })
+
+    return pack
   })
