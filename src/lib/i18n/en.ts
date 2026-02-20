@@ -26,6 +26,7 @@ const en = {
   },
   nav: {
     projects: 'Projects',
+    generate: 'Generate',
     gallery: 'Gallery',
     metadata: 'Metadata',
     settings: 'Settings',
@@ -134,6 +135,7 @@ const en = {
     unfavorite: 'Remove from favorites',
     favorite: 'Add to favorites',
     noThumbnail: 'No thumbnail',
+    quickGenerate: 'Quick Generate',
   },
   imageDetail: {
     details: 'Details',
@@ -210,6 +212,7 @@ const en = {
     referenceImages: 'Reference Images',
     vibeTransfer: 'Vibe Transfer',
     characterReference: 'Character Reference',
+    quickGenerate: 'Quick Generate',
   },
   workspace: {
     projects: 'Projects',
@@ -421,6 +424,23 @@ const en = {
     filledCount: '{{filled}}/{{total}} filled',
     unfilledCount: '{{unfilled}}/{{total}} unfilled',
     defaultValue: 'Default',
+  },
+  quickGenerate: {
+    title: 'Quick Generate',
+    prompt: 'Prompt',
+    negativePrompt: 'Negative Prompt',
+    characters: 'Characters',
+    addCharacter: 'Add Character',
+    characterName: 'Character name',
+    characterPrompt: 'Character prompt...',
+    characterNegative: 'Character negative...',
+    emptyState: 'Enter a prompt and click Generate to create images.',
+    noImagesYet: 'Generated images will appear here.',
+    viewInGallery: 'View all in Gallery',
+    seed: 'Seed',
+    generating: 'Generating...',
+    promptPlaceholder: 'Enter your prompt here...',
+    negativePlaceholder: 'Enter negative prompt...',
   },
   history: {
     title: 'History',

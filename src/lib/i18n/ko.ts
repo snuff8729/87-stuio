@@ -29,6 +29,7 @@ const ko: DeepStringify<typeof en> = {
   },
   nav: {
     projects: '프로젝트',
+    generate: '생성',
     gallery: '갤러리',
     metadata: '메타데이터',
     settings: '설정',
@@ -137,6 +138,7 @@ const ko: DeepStringify<typeof en> = {
     unfavorite: '즐겨찾기 해제',
     favorite: '즐겨찾기',
     noThumbnail: '썸네일 없음',
+    quickGenerate: '빠른 생성',
   },
   imageDetail: {
     details: '상세 정보',
@@ -213,6 +215,7 @@ const ko: DeepStringify<typeof en> = {
     referenceImages: '참조 이미지',
     vibeTransfer: '바이브 트랜스퍼',
     characterReference: '캐릭터 레퍼런스',
+    quickGenerate: '빠른 생성',
   },
   workspace: {
     projects: '프로젝트',
@@ -424,6 +427,23 @@ const ko: DeepStringify<typeof en> = {
     filledCount: '{{filled}}/{{total}} 입력됨',
     unfilledCount: '{{unfilled}}/{{total}} 미입력',
     defaultValue: '기본값',
+  },
+  quickGenerate: {
+    title: '빠른 생성',
+    prompt: '프롬프트',
+    negativePrompt: '네거티브 프롬프트',
+    characters: '캐릭터',
+    addCharacter: '캐릭터 추가',
+    characterName: '캐릭터 이름',
+    characterPrompt: '캐릭터 프롬프트...',
+    characterNegative: '캐릭터 네거티브...',
+    emptyState: '프롬프트를 입력하고 생성 버튼을 클릭하세요.',
+    noImagesYet: '생성된 이미지가 여기에 표시됩니다.',
+    viewInGallery: '갤러리에서 전체 보기',
+    seed: '시드',
+    generating: '생성 중...',
+    promptPlaceholder: '프롬프트를 입력하세요...',
+    negativePlaceholder: '네거티브 프롬프트를 입력하세요...',
   },
   history: {
     title: '히스토리',

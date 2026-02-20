@@ -66,6 +66,7 @@ type SearchParams = {
   favorite?: boolean
   minRating?: number
   sortBy?: 'newest' | 'oldest' | 'rating' | 'favorites'
+  quick?: boolean
 }
 
 export const Route = createFileRoute('/gallery/')({
@@ -76,6 +77,7 @@ export const Route = createFileRoute('/gallery/')({
     favorite: search.favorite === true || search.favorite === 'true' ? true : undefined,
     minRating: search.minRating ? Number(search.minRating) : undefined,
     sortBy: (search.sortBy as SearchParams['sortBy']) || undefined,
+    quick: search.quick === true || search.quick === 'true' ? true : undefined,
   }),
   loaderDeps: ({ search }) => search,
   loader: async ({ deps }) => {
@@ -90,6 +92,7 @@ export const Route = createFileRoute('/gallery/')({
           minRating: deps.minRating,
           tagIds: deps.tag ? [deps.tag] : undefined,
           sortBy: deps.sortBy,
+          quickGenerate: deps.quick,
         },
       }),
       listTags(),
@@ -213,6 +216,7 @@ function GalleryPage() {
         minRating: search.minRating,
         tagIds: search.tag ? [search.tag] : undefined,
         sortBy: search.sortBy,
+        quickGenerate: search.quick,
       },
     })
     setImages((prev) => [...prev, ...result])
@@ -274,7 +278,7 @@ function GalleryPage() {
     }
   }
 
-  const hasFilters = search.project || search.favorite || search.minRating || search.projectSceneId || search.tag || search.sortBy
+  const hasFilters = search.project || search.favorite || search.minRating || search.projectSceneId || search.tag || search.sortBy || search.quick
 
   return (
     <div>
@@ -311,13 +315,14 @@ function GalleryPage() {
       {/* Filter Bar */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <Select
-          value={search.project ? String(search.project) : 'all'}
+          value={search.quick ? 'quick' : search.project ? String(search.project) : 'all'}
           onValueChange={(v) =>
             navigate({
               search: (prev) => ({
                 ...prev,
-                project: v === 'all' ? undefined : Number(v),
-                projectSceneId: v === 'all' ? undefined : prev.projectSceneId,
+                project: v === 'all' || v === 'quick' ? undefined : Number(v),
+                projectSceneId: v === 'all' || v === 'quick' ? undefined : prev.projectSceneId,
+                quick: v === 'quick' ? true : undefined,
               }),
             })
           }
@@ -327,6 +332,7 @@ function GalleryPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t('gallery.allProjects')}</SelectItem>
+            <SelectItem value="quick">{t('gallery.quickGenerate')}</SelectItem>
             {allProjects.map((p) => (
               <SelectItem key={p.id} value={String(p.id)}>
                 {p.name}

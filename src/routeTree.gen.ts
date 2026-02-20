@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as MetadataIndexRouteImport } from './routes/metadata/index'
+import { Route as GenerateIndexRouteImport } from './routes/generate/index'
 import { Route as GalleryIndexRouteImport } from './routes/gallery/index'
 import { Route as GalleryImageIdRouteImport } from './routes/gallery/$imageId'
 import { Route as WorkspaceProjectIdRouteRouteImport } from './routes/workspace/$projectId/route'
@@ -31,6 +32,11 @@ const SettingsIndexRoute = SettingsIndexRouteImport.update({
 const MetadataIndexRoute = MetadataIndexRouteImport.update({
   id: '/metadata/',
   path: '/metadata/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GenerateIndexRoute = GenerateIndexRouteImport.update({
+  id: '/generate/',
+  path: '/generate/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GalleryIndexRoute = GalleryIndexRouteImport.update({
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/workspace/$projectId': typeof WorkspaceProjectIdRouteRouteWithChildren
   '/gallery/$imageId': typeof GalleryImageIdRoute
   '/gallery/': typeof GalleryIndexRoute
+  '/generate/': typeof GenerateIndexRoute
   '/metadata/': typeof MetadataIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/workspace/$projectId/': typeof WorkspaceProjectIdIndexRoute
@@ -74,6 +81,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/gallery/$imageId': typeof GalleryImageIdRoute
   '/gallery': typeof GalleryIndexRoute
+  '/generate': typeof GenerateIndexRoute
   '/metadata': typeof MetadataIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/workspace/$projectId': typeof WorkspaceProjectIdIndexRoute
@@ -85,6 +93,7 @@ export interface FileRoutesById {
   '/workspace/$projectId': typeof WorkspaceProjectIdRouteRouteWithChildren
   '/gallery/$imageId': typeof GalleryImageIdRoute
   '/gallery/': typeof GalleryIndexRoute
+  '/generate/': typeof GenerateIndexRoute
   '/metadata/': typeof MetadataIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/workspace/$projectId/': typeof WorkspaceProjectIdIndexRoute
@@ -97,6 +106,7 @@ export interface FileRouteTypes {
     | '/workspace/$projectId'
     | '/gallery/$imageId'
     | '/gallery/'
+    | '/generate/'
     | '/metadata/'
     | '/settings/'
     | '/workspace/$projectId/'
@@ -106,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/gallery/$imageId'
     | '/gallery'
+    | '/generate'
     | '/metadata'
     | '/settings'
     | '/workspace/$projectId'
@@ -116,6 +127,7 @@ export interface FileRouteTypes {
     | '/workspace/$projectId'
     | '/gallery/$imageId'
     | '/gallery/'
+    | '/generate/'
     | '/metadata/'
     | '/settings/'
     | '/workspace/$projectId/'
@@ -127,6 +139,7 @@ export interface RootRouteChildren {
   WorkspaceProjectIdRouteRoute: typeof WorkspaceProjectIdRouteRouteWithChildren
   GalleryImageIdRoute: typeof GalleryImageIdRoute
   GalleryIndexRoute: typeof GalleryIndexRoute
+  GenerateIndexRoute: typeof GenerateIndexRoute
   MetadataIndexRoute: typeof MetadataIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
@@ -152,6 +165,13 @@ declare module '@tanstack/react-router' {
       path: '/metadata'
       fullPath: '/metadata/'
       preLoaderRoute: typeof MetadataIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/generate/': {
+      id: '/generate/'
+      path: '/generate'
+      fullPath: '/generate/'
+      preLoaderRoute: typeof GenerateIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/gallery/': {
@@ -213,6 +233,7 @@ const rootRouteChildren: RootRouteChildren = {
   WorkspaceProjectIdRouteRoute: WorkspaceProjectIdRouteRouteWithChildren,
   GalleryImageIdRoute: GalleryImageIdRoute,
   GalleryIndexRoute: GalleryIndexRoute,
+  GenerateIndexRoute: GenerateIndexRoute,
   MetadataIndexRoute: MetadataIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
 }

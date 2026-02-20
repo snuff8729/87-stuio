@@ -2,6 +2,7 @@ import { Link, useRouterState } from '@tanstack/react-router'
 import { cn } from '@/lib/utils'
 import {
   Home03Icon,
+  MagicWand01Icon,
   Image02Icon,
   Settings02Icon,
   FileSearchIcon,
@@ -12,6 +13,7 @@ import type { TranslationKeys } from '@/lib/i18n'
 
 const navItems = [
   { to: '/', key: 'nav.projects' as TranslationKeys, icon: Home03Icon },
+  { to: '/generate', key: 'nav.generate' as TranslationKeys, icon: MagicWand01Icon },
   { to: '/gallery', key: 'nav.gallery' as TranslationKeys, icon: Image02Icon },
   { to: '/metadata', key: 'nav.metadata' as TranslationKeys, icon: FileSearchIcon },
   { to: '/settings', key: 'nav.settings' as TranslationKeys, icon: Settings02Icon },

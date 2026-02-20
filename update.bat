@@ -11,6 +11,7 @@ set "NODE_DIST=node-v%NODE_VERSION%-win-x64"
 set "NODE_URL=https://nodejs.org/dist/v%NODE_VERSION%/%NODE_DIST%.zip"
 set "RUNTIME_DIR=%~dp0runtime"
 set "NODE_DIR=%RUNTIME_DIR%\node"
+set "GIT_CMD="
 
 echo.
 echo   =======================================
@@ -19,14 +20,69 @@ echo   =======================================
 echo.
 
 :: ============================================================
-::  Step 1: Node.js Runtime
+::  Step 1: Git Pull
+:: ============================================================
+
+:: Check PATH
+where git >nul 2>&1
+if not errorlevel 1 (
+    set "GIT_CMD=git"
+    goto :git_pull
+)
+
+:: Check common install locations
+if exist "C:\Program Files\Git\cmd\git.exe" (
+    set "GIT_CMD=C:\Program Files\Git\cmd\git.exe"
+    goto :git_pull
+)
+if exist "C:\Program Files (x86)\Git\cmd\git.exe" (
+    set "GIT_CMD=C:\Program Files (x86)\Git\cmd\git.exe"
+    goto :git_pull
+)
+
+:: Try winget install
+echo   [1/5] Git 설치 중...
+where winget >nul 2>&1
+if errorlevel 1 goto :git_not_found
+
+winget install --id Git.Git -e --source winget --accept-package-agreements --accept-source-agreements >nul 2>&1
+if errorlevel 1 goto :git_not_found
+
+:: Check again after install
+if exist "C:\Program Files\Git\cmd\git.exe" (
+    set "GIT_CMD=C:\Program Files\Git\cmd\git.exe"
+    echo         Git 설치 완료!
+    goto :git_pull
+)
+
+:git_not_found
+echo.
+echo   [ERROR] Git이 설치되어 있지 않습니다.
+echo   아래 링크에서 Git을 설치한 후 다시 실행해주세요:
+echo   https://git-scm.com/download/win
+echo.
+goto :fail
+
+:git_pull
+echo   [1/5] 최신 버전 가져오는 중...
+"%GIT_CMD%" pull
+if errorlevel 1 (
+    echo.
+    echo   [ERROR] Git pull에 실패했습니다.
+    echo   인터넷 연결 또는 저장소 상태를 확인해주세요.
+    goto :fail
+)
+echo         완료!
+
+:: ============================================================
+::  Step 2: Node.js Runtime
 :: ============================================================
 if exist "%NODE_DIR%\node.exe" (
-    echo   [1/4] Node.js ................. OK
+    echo   [2/5] Node.js ................. OK
     goto :deps
 )
 
-echo   [1/4] Node.js 다운로드 중...
+echo   [2/5] Node.js 다운로드 중...
 if not exist "%RUNTIME_DIR%" mkdir "%RUNTIME_DIR%"
 
 powershell -Command "& { $ProgressPreference = 'SilentlyContinue'; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri '%NODE_URL%' -OutFile '%RUNTIME_DIR%\node.zip' }"
@@ -51,12 +107,12 @@ del /q "%RUNTIME_DIR%\node.zip" 2>nul
 echo         완료!
 
 :: ============================================================
-::  Step 2: Install Dependencies
+::  Step 3: Install Dependencies
 :: ============================================================
 :deps
 set "PATH=%NODE_DIR%;%PATH%"
 
-echo   [2/4] 의존성 설치 중...
+echo   [3/5] 의존성 설치 중...
 call "%NODE_DIR%\npm.cmd" install --loglevel=warn 2>&1
 if errorlevel 1 (
     echo.
@@ -66,9 +122,9 @@ if errorlevel 1 (
 echo         완료!
 
 :: ============================================================
-::  Step 3: Database Migration
+::  Step 4: Database Migration
 :: ============================================================
-echo   [3/4] 데이터베이스 마이그레이션 중...
+echo   [4/5] 데이터베이스 마이그레이션 중...
 if not exist "%~dp0data" mkdir "%~dp0data"
 call "%NODE_DIR%\npx.cmd" --yes drizzle-kit migrate 2>nul
 if errorlevel 1 (
@@ -78,9 +134,9 @@ if errorlevel 1 (
 echo         완료!
 
 :: ============================================================
-::  Step 4: Build Application
+::  Step 5: Build Application
 :: ============================================================
-echo   [4/4] 애플리케이션 빌드 중...
+echo   [5/5] 애플리케이션 빌드 중...
 if exist "%~dp0.output" rmdir /s /q "%~dp0.output"
 call "%NODE_DIR%\npm.cmd" run build 2>&1
 if errorlevel 1 (

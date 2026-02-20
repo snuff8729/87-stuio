@@ -72,7 +72,7 @@ export const prepareDownload = createServerFn({ method: 'POST' })
     }
 
     // Lookup project names
-    const projectIds = [...new Set(images.map((img) => img.projectId))]
+    const projectIds = [...new Set(images.map((img) => img.projectId).filter((id): id is number => id != null))]
     const projectMap = new Map<number, string>()
     for (const pid of projectIds) {
       const proj = db.select({ name: projects.name }).from(projects).where(eq(projects.id, pid)).get()
@@ -80,7 +80,7 @@ export const prepareDownload = createServerFn({ method: 'POST' })
     }
 
     // Lookup scene names
-    const sceneIds = [...new Set(images.map((img) => img.projectSceneId))]
+    const sceneIds = [...new Set(images.map((img) => img.projectSceneId).filter((id): id is number => id != null))]
     const sceneMap = new Map<number, string>()
     for (const sid of sceneIds) {
       const scene = db.select({ name: projectScenes.name }).from(projectScenes).where(eq(projectScenes.id, sid)).get()
@@ -105,8 +105,8 @@ export const prepareDownload = createServerFn({ method: 'POST' })
         : '0.0'
 
       const vars: FilenameVars = {
-        project_name: projectMap.get(img.projectId) ?? 'unknown',
-        scene_name: sceneMap.get(img.projectSceneId) ?? 'unknown',
+        project_name: (img.projectId != null ? projectMap.get(img.projectId) : undefined) ?? 'unknown',
+        scene_name: (img.projectSceneId != null ? sceneMap.get(img.projectSceneId) : undefined) ?? 'unknown',
         seed: img.seed,
         index: i + 1,
         date: img.createdAt ? img.createdAt.split('T')[0] ?? img.createdAt.split(' ')[0] : '',

@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { toast } from 'sonner'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Upload01Icon, Cancel01Icon, ArrowRight01Icon, Copy01Icon } from '@hugeicons/core-free-icons'
+import { Upload01Icon, Cancel01Icon, ArrowRight01Icon, Copy01Icon, MagicWand01Icon } from '@hugeicons/core-free-icons'
 import { PageHeader } from '@/components/common/page-header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -27,6 +27,7 @@ export const Route = createFileRoute('/metadata/')({
 })
 
 function InspectPage() {
+  const navigate = useNavigate()
   const [metadata, setMetadata] = useState<NAIMetadata | null>(null)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [fileName, setFileName] = useState<string | null>(null)
@@ -171,13 +172,64 @@ function InspectPage() {
             actions={
               <div className="flex items-center gap-2">
                 {metadata && (
-                  <Button
-                    size="sm"
-                    onClick={() => setShowCreateDialog(true)}
-                  >
-                    <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 mr-1.5" />
-                    {t('metadata.createProject')}
-                  </Button>
+                  <>
+                    <Button
+                      size="sm"
+                      onClick={() => setShowCreateDialog(true)}
+                    >
+                      <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 mr-1.5" />
+                      {t('metadata.createProject')}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const hasV4Chars = metadata.v4_prompt?.caption?.char_captions &&
+                          metadata.v4_prompt.caption.char_captions.length > 0
+
+                        let generalPrompt = ''
+                        if (metadata.v4_prompt?.caption?.base_caption) {
+                          generalPrompt = metadata.v4_prompt.caption.base_caption
+                        } else {
+                          generalPrompt = metadata.prompt ?? ''
+                        }
+
+                        const characterPrompts = hasV4Chars
+                          ? metadata.v4_prompt!.caption!.char_captions!.map((cc, i) => {
+                              const negChar = metadata.v4_negative_prompt?.caption?.char_captions?.[i]
+                              return {
+                                name: `Character ${i + 1}`,
+                                prompt: cc.char_caption,
+                                negative: negChar?.char_caption ?? '',
+                              }
+                            })
+                          : []
+
+                        const parameters: Record<string, unknown> = {}
+                        if (metadata.steps != null) parameters.steps = metadata.steps
+                        if (metadata.cfgScale != null) parameters.scale = metadata.cfgScale
+                        if (metadata.cfgRescale != null) parameters.cfgRescale = metadata.cfgRescale
+                        if (metadata.sampler) parameters.sampler = metadata.sampler
+                        if (metadata.scheduler) parameters.scheduler = metadata.scheduler
+                        if (metadata.ucPreset != null) parameters.ucPreset = metadata.ucPreset
+                        if (metadata.width != null) parameters.width = metadata.width
+                        if (metadata.height != null) parameters.height = metadata.height
+
+                        navigate({
+                          to: '/generate',
+                          state: {
+                            generalPrompt,
+                            negativePrompt: metadata.negativePrompt ?? '',
+                            characterPrompts,
+                            parameters,
+                          } as any,
+                        })
+                      }}
+                    >
+                      <HugeiconsIcon icon={MagicWand01Icon} className="size-4 mr-1.5" />
+                      {t('metadata.quickGenerate')}
+                    </Button>
+                  </>
                 )}
                 <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>
                   <HugeiconsIcon icon={Upload01Icon} className="size-4 mr-1.5" />

@@ -132,10 +132,8 @@ export const generationJobs = sqliteTable(
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
     projectId: integer('project_id')
-      .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
     projectSceneId: integer('project_scene_id')
-      .notNull()
       .references(() => projectScenes.id, { onDelete: 'cascade' }),
     sourceSceneId: integer('source_scene_id').references(() => scenes.id, {
       onDelete: 'set null',
@@ -165,10 +163,8 @@ export const generatedImages = sqliteTable(
       .notNull()
       .references(() => generationJobs.id, { onDelete: 'cascade' }),
     projectId: integer('project_id')
-      .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
     projectSceneId: integer('project_scene_id')
-      .notNull()
       .references(() => projectScenes.id, { onDelete: 'cascade' }),
     sourceSceneId: integer('source_scene_id').references(() => scenes.id, {
       onDelete: 'set null',

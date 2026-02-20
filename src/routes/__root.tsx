@@ -102,12 +102,13 @@ function RootComponent() {
   const routerState = useRouterState()
   const { pathname } = routerState.location
   const isWorkspace = pathname.startsWith('/workspace')
+  const isGenerate = pathname.startsWith('/generate')
   const isImageDetail = /^\/gallery\/\d+/.test(pathname)
 
   return (
     <I18nProvider>
       <OnboardingProvider>
-        {isWorkspace || isImageDetail ? (
+        {isWorkspace || isImageDetail || isGenerate ? (
           <TooltipProvider delayDuration={300}>
             <Outlet />
             <Toaster richColors position="top-center" />

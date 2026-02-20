@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { db } from '../db'
 import { generatedImages, tags, imageTags, projects, projectScenes } from '../db/schema'
-import { eq, desc, asc, and, sql, inArray } from 'drizzle-orm'
+import { eq, desc, asc, and, sql, inArray, isNull } from 'drizzle-orm'
 import { createLogger } from '../services/logger'
 import { deleteImageFiles } from '../services/image'
 
@@ -19,6 +19,7 @@ export const listImages = createServerFn({ method: 'GET' })
       minRating?: number
       tagIds?: number[]
       sortBy?: 'newest' | 'oldest' | 'rating' | 'favorites'
+      quickGenerate?: boolean
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -27,6 +28,7 @@ export const listImages = createServerFn({ method: 'GET' })
     const offset = (page - 1) * limit
 
     const conditions = []
+    if (data.quickGenerate) conditions.push(isNull(generatedImages.projectId))
     if (data.projectId) conditions.push(eq(generatedImages.projectId, data.projectId))
     if (data.projectSceneId) conditions.push(eq(generatedImages.projectSceneId, data.projectSceneId))
     if (data.sourceSceneId) conditions.push(eq(generatedImages.sourceSceneId, data.sourceSceneId))

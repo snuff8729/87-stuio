@@ -13,7 +13,7 @@ const IMAGES_DIR = './data/images'
 const THUMBNAILS_DIR = './data/thumbnails'
 
 export function saveImage(
-  projectId: number,
+  projectId: number | null,
   jobId: number,
   seed: number,
   imageData: Uint8Array,
@@ -21,8 +21,9 @@ export function saveImage(
   const timestamp = Date.now()
   const filename = `${jobId}_${seed}_${timestamp}.png`
 
-  const filePath = join(IMAGES_DIR, String(projectId), filename)
-  const thumbnailPath = join(THUMBNAILS_DIR, String(projectId), filename)
+  const subdir = projectId != null ? String(projectId) : 'quick'
+  const filePath = join(IMAGES_DIR, subdir, filename)
+  const thumbnailPath = join(THUMBNAILS_DIR, subdir, filename)
 
   mkdirSync(dirname(filePath), { recursive: true })
   mkdirSync(dirname(thumbnailPath), { recursive: true })
