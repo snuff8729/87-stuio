@@ -180,6 +180,10 @@ const en = {
     character: 'Character {{n}}',
     characterNegative: 'Character {{n}} Negative',
     references: 'References',
+    deleteTitle: 'Delete Image',
+    deleteDesc: 'This image and its file will be permanently deleted. This cannot be undone.',
+    deleted: 'Image deleted',
+    deleteFailed: 'Failed to delete image',
   },
   metadata: {
     title: 'Metadata',

@@ -2,17 +2,19 @@ import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-r
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowLeft02Icon, Cancel01Icon } from '@hugeicons/core-free-icons'
+import { ArrowLeft02Icon, Cancel01Icon, Delete02Icon } from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
+import { ConfirmDialog } from '@/components/common/confirm-dialog'
 import {
   getImageDetailPage,
   updateImage,
   addTag,
   removeTag,
+  bulkUpdateImages,
 } from '@/server/functions/gallery'
 import { updateProjectScene } from '@/server/functions/project-scenes'
 import { updateProject } from '@/server/functions/projects'
@@ -119,6 +121,23 @@ function ImageDetailPage() {
       router.history.back()
     } else {
       navigate({ to: '/gallery', search })
+    }
+  }
+
+  async function handleDelete() {
+    try {
+      await bulkUpdateImages({ data: { imageIds: [detail.id], delete: true } })
+      toast.success(t('imageDetail.deleted'))
+      // Navigate to next/prev image or back to gallery
+      if (detail.nextId) {
+        navigate({ to: '/gallery/$imageId', params: { imageId: String(detail.nextId) }, search, replace: true })
+      } else if (detail.prevId) {
+        navigate({ to: '/gallery/$imageId', params: { imageId: String(detail.prevId) }, search, replace: true })
+      } else {
+        navigate({ to: '/gallery', search, replace: true })
+      }
+    } catch {
+      toast.error(t('imageDetail.deleteFailed'))
     }
   }
 
@@ -593,13 +612,23 @@ function ImageDetailPage() {
           )}
         </div>
 
-        {/* Download */}
-        <div>
-          <a href={imageSrc} download>
+        {/* Download + Delete */}
+        <div className="flex gap-2">
+          <a href={imageSrc} download className="flex-1">
             <Button variant="outline" size="sm" className="w-full">
               {t('imageDetail.download')}
             </Button>
           </a>
+          <ConfirmDialog
+            trigger={
+              <Button variant="destructive" size="sm">
+                <HugeiconsIcon icon={Delete02Icon} className="size-4" />
+              </Button>
+            }
+            title={t('imageDetail.deleteTitle')}
+            description={t('imageDetail.deleteDesc')}
+            onConfirm={handleDelete}
+          />
         </div>
       </div>
     </div>

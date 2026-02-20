@@ -183,6 +183,10 @@ const ko: DeepStringify<typeof en> = {
     character: '캐릭터 {{n}}',
     characterNegative: '캐릭터 {{n}} 네거티브',
     references: '참조 이미지',
+    deleteTitle: '이미지 삭제',
+    deleteDesc: '이미지와 파일이 영구적으로 삭제됩니다. 되돌릴 수 없습니다.',
+    deleted: '이미지가 삭제되었습니다',
+    deleteFailed: '이미지 삭제에 실패했습니다',
   },
   metadata: {
     title: '메타데이터',

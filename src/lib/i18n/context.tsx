@@ -51,8 +51,14 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>
 }
 
+const fallbackT = createT('en')
+const fallbackValue: I18nContextValue = {
+  locale: 'en',
+  setLocale: () => {},
+  t: fallbackT,
+}
+
 export function useTranslation() {
   const ctx = useContext(I18nContext)
-  if (!ctx) throw new Error('useTranslation must be used within I18nProvider')
-  return ctx
+  return ctx ?? fallbackValue
 }
